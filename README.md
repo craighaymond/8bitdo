@@ -1,3 +1,5 @@
+A collection of python scripts that help with 8bitdo Ultimate controller setup, mapping and mode changes in Windows.  These are design to work with systems utilizng usbip
+
 # 8BitDo Bridge - S Mode to Xbox
 
 A Python-based controller bridge that maps 8BitDo controllers in S Mode to Xbox gamepad input for Windows. This allows 8BitDo controllers to work seamlessly with games and applications that expect Xbox controller input.  Pair this with Windows .bat scripts when starting and exiting various executables that require the controllers to appear as Xbox controllers.
