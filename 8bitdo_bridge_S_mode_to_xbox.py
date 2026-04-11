@@ -5,7 +5,7 @@ import sys
 import ctypes
 
 # Set window title for the RetroBat stop script
-ctypes.windll.kernel32.SetConsoleTitleW("TeknoParrotBridge")
+ctypes.windll.kernel32.SetConsoleTitleW("8bitdoBridge")
 
 pygame.init()
 pygame.joystick.init()
