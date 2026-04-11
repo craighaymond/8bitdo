@@ -76,7 +76,7 @@ Higher values increase the deadzone (less sensitive), lower values decrease it (
 
 ## Behavior
 
-- **Console Title**: The script sets the console window title to "TeknoParrotBridge" for RetroBat integration (as an example usecase)
+- **Console Title**: The script sets the console window title to "8bitdoBridge" for RetroBat integration (as an example usecase)
 - **Rumble Feedback**: Each connected controller receives a brief vibration pulse on startup
 - **No Rumble Support**: If a controller doesn't support rumble, a note will be printed
 - **Update Rate**: Processes controller input at ~100 Hz (10ms sleep between updates)
