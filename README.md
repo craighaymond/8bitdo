@@ -8,17 +8,17 @@ This script performs a controller bridging function similar to XOutput, but spec
 
 ## Features
 
-- **Automatic Controller Detection**: Automatically detects connected 8BitDo controllers
-- **Full Button Mapping**: Maps all buttons including D-Pad, analog sticks, triggers, and shoulder buttons
-- **Deadzone Handling**: Includes adjustable deadzone (default 20%) for stable analog stick input in arcade environments
-- **Vibration Feedback**: Pulses connected controllers to indicate the bridge is active
+- **Automatic Hot-Plugging**: Automatically detects and binds controllers as they are plugged in or out without restarting the script
+- **Full Analog Mapping**: Maps all buttons and provides full pressure sensitivity for triggers (ZL/ZR)
+- **Deadzone Handling**: Includes adjustable deadzone (default 20%) via a global constant for stable analog stick input
+- **Vibration Feedback**: Pulses connected controllers to indicate a successful bridge connection
 - **Multiple Controller Support**: Can handle multiple controllers simultaneously
-- **Clean Shutdown**: Gracefully disconnects virtual controllers on exit
+- **Graceful Cleanup**: Explicitly releases virtual controllers on exit or disconnect
 
 ## Requirements
 
 - Python 3.6+
-- pygame
+- pygame 2.0+
 - vgamepad (virtual gamepad library)
 - Windows OS
 
@@ -39,47 +39,47 @@ python 8bitdo_bridge_S_mode_to_xbox.py
 ```
 
 The script will:
-1. Detect all connected non-Xbox controllers
-2. Create virtual Xbox gamepads for each detected controller
-3. Map inputs from physical controllers to virtual Xbox controllers
+1. Start a persistent listener for game controllers
+2. Create virtual Xbox gamepads for each 8BitDo controller detected (S-mode)
+3. Support hot-swapping/reconnecting controllers while running
 4. Continue running until you press Ctrl+C or the process is terminated
 
 ## Button Mapping
 
-| 8BitDo Button | Xbox Button |
+| 8BitDo Button (S-Mode) | Xbox Button |
 |---|---|
-| B | Xbox B |
-| A | Xbox A |
-| Y | Xbox Y |
-| X | Xbox X |
-| Select | Xbox Back |
-| R1 | Xbox RB (Right Shoulder) |
-| L1 | Xbox LB (Left Shoulder) |
-| L3 | Xbox Left Thumb Button |
+| B (Bottom) | Xbox A |
+| A (Right) | Xbox B |
+| Y (Left) | Xbox X |
+| X (Top) | Xbox Y |
+| Plus (+) | Xbox Start |
+| Minus (-) | Xbox Back |
+| R (Bumper) | Xbox RB (Right Shoulder) |
+| L (Bumper) | Xbox LB (Left Shoulder) |
+| ZR (Trigger) | Xbox RT (Right Trigger - Analog) |
+| ZL (Trigger) | Xbox LT (Left Trigger - Analog) |
+| Left Stick Click | Xbox L3 |
+| Right Stick Click | Xbox R3 |
 | D-Pad Up/Down/Left/Right | D-Pad Up/Down/Left/Right |
 | Left Stick | Left Joystick |
 | Right Stick | Right Joystick |
-| ZL / LT | Left Trigger |
-| ZR / RT | Right Trigger |
 
 ## Configuration
 
-### Deadzone
+### Deadzone & Polling
 
-The deadzone threshold (default 20% or 0.2) prevents unwanted analog stick drift. To adjust, modify the `self.dz` value in the `ControllerBridge.__init__()` method:
+The configuration values are located at the top of the script:
 
 ```python
-self.dz = 0.2  # Change this value (0.0 to 1.0)
+DEADZONE = 0.2      # 0.0 to 1.0 threshold for analog drift
+POLLING_RATE = 0.01 # 100Hz update frequency
 ```
 
-Higher values increase the deadzone (less sensitive), lower values decrease it (more sensitive).
+### Behavior
 
-## Behavior
-
-- **Console Title**: The script sets the console window title to "8bitdoBridge" for RetroBat integration (as an example usecase)
-- **Rumble Feedback**: Each connected controller receives a brief vibration pulse on startup
-- **No Rumble Support**: If a controller doesn't support rumble, a note will be printed
-- **Update Rate**: Processes controller input at ~100 Hz (10ms sleep between updates)
+- **Console Title**: The script sets the console window title to "8bitdoBridge" for RetroBat integration
+- **Rumble Feedback**: Each connected controller receives a brief vibration pulse upon successful binding
+- **Logging**: All connection events are logged with timestamps to the console
 
 ## Troubleshooting
 
