@@ -4,6 +4,7 @@ import re
 import ctypes
 import socket
 import time
+import os
 
 # Known 8BitDo Hardware IDs (Native and Emulated modes)
 HWID_MAP = {
@@ -54,10 +55,13 @@ def get_connected_clients():
     return sorted(list(clients))
 
 def is_admin():
+    """Check if script is running with elevated privileges on Windows or root on Linux."""
     try:
+        # Windows check
         return ctypes.windll.shell32.IsUserAnAdmin()
-    except:
-        return False
+    except AttributeError:
+        # Linux/Unix check - windll doesn't exist on non-Windows
+        return os.geteuid() == 0
 
 def run_command(command, exit_on_fail=True, silent_fail=False):
     """Executes a command and returns stdout. Gracefully handles failures if requested."""
@@ -127,8 +131,13 @@ def bind_8bitdo(devices):
                 print("Failed.")
 
 def main():
+    if sys.platform not in ["win32", "linux"]:
+        log(f"Unsupported platform: {sys.platform}")
+        sys.exit(1)
+    
     if not is_admin():
-        print(f"{get_timestamp()} This script must be run as Administrator.")
+        system = "Administrator" if sys.platform == "win32" else "root"
+        log(f"This script must be run as {system}.")
         sys.exit(1)
 
     server_ip = get_ip_address()
