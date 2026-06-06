@@ -120,11 +120,6 @@ def get_8bitdo_devices():
     lines = output.splitlines()
     for i, line in enumerate(lines):
         # Flexible regex for busid and HWID
-        # Examples:
-        #   - busid 1-1.2 (046d:c52b)
-        #   - 1-1: unknown vendor : unknown product (046d:c52b)
-        #   1-1  045e:028e  Xbox 360 Controller
-        
         busid = None
         hwid_raw = None
         
@@ -152,11 +147,13 @@ def get_8bitdo_devices():
         if busid and hwid_raw:
             # Identify the mode
             mode = "Unknown"
-            is_match = False
+            is_valid_controller = False
             for target_id, target_name in HWID_MAP.items():
                 if target_id.lower() in hwid_raw:
                     mode = target_name
-                    is_match = True
+                    # Only mark as valid if it's NOT explicitly ignored
+                    if "Ignored" not in target_name:
+                        is_valid_controller = True
                     break
             
             # Check current line or next line for "8bitdo"
@@ -165,20 +162,19 @@ def get_8bitdo_devices():
                 search_text += " " + lines[i+1].lower()
             
             if "8bitdo" in search_text:
-                if mode == "Unknown": mode = "Native"
-                is_match = True
+                if mode == "Unknown": 
+                    mode = "Native"
+                    is_valid_controller = True
+                # If it's already "Ignored", don't set is_valid_controller
             
-            if IS_WINDOWS:
-                status_line = line.strip()
-            else:
-                # Check if bound to usbip-host
-                is_bound = os.path.exists(f"/sys/bus/usb/drivers/usbip-host/{busid}")
-                status_line = "Shared" if is_bound else "Not shared"
-            
-            # Diagnostic: log all found devices if they have HWID
-            # log(f"Found Device: {busid} ({hwid_raw}) - {mode} [Match: {is_match}]")
-            
-            if is_match:
+            if is_valid_controller:
+                if IS_WINDOWS:
+                    status_line = line.strip()
+                else:
+                    # Check if bound to usbip-host
+                    is_bound = os.path.exists(f"/sys/bus/usb/drivers/usbip-host/{busid}")
+                    status_line = "Shared" if is_bound else "Not shared"
+                
                 bitdo_devs.append({
                     "busid": busid, 
                     "hwid": hwid_raw, 
