@@ -118,9 +118,9 @@ def get_8bitdo_devices():
         return []
 
     bitdo_devs = []
+    all_usb_ids = [] # Diagnostic
     lines = output.splitlines()
     for i, line in enumerate(lines):
-        # Flexible regex for busid and HWID
         busid = None
         hwid_raw = None
         
@@ -130,22 +130,17 @@ def get_8bitdo_devices():
                 busid, hwid_raw = match.group(1), match.group(2).lower()
         else:
             # Linux patterns
-            # Pattern 1: " - busid 1-1 (045e:028e)"
             match = re.search(r"busid\s+([\d\-\.]+)\s+\(([a-fA-F\d]{4}:[a-fA-F\d]{4})\)", line)
+            if not match:
+                match = re.search(r"-\s+([\d\-\.]+):\s+.*\(([a-fA-F\d]{4}:[a-fA-F\d]{4})\)", line)
+            if not match:
+                match = re.search(r"^([\d\-\.]+):\s+.*\(([a-fA-F\d]{4}:[a-fA-F\d]{4})\)", line)
+            
             if match:
                 busid, hwid_raw = match.group(1), match.group(2).lower()
-            else:
-                # Pattern 2: " - 1-1: ... (045e:028e)"
-                match = re.search(r"-\s+([\d\-\.]+):\s+.*\(([a-fA-F\d]{4}:[a-fA-F\d]{4})\)", line)
-                if match:
-                    busid, hwid_raw = match.group(1), match.group(2).lower()
-                else:
-                    # Pattern 3: "1-1: ... (045e:028e)"
-                    match = re.search(r"^([\d\-\.]+):\s+.*\(([a-fA-F\d]{4}:[a-fA-F\d]{4})\)", line)
-                    if match:
-                        busid, hwid_raw = match.group(1), match.group(2).lower()
             
         if busid and hwid_raw:
+            all_usb_ids.append(hwid_raw)
             # Identify the mode
             mode = "Unknown"
             is_ignored = False
@@ -174,7 +169,6 @@ def get_8bitdo_devices():
                 if IS_WINDOWS:
                     status_line = line.strip()
                 else:
-                    # Check if bound to usbip-host
                     is_bound = os.path.exists(f"/sys/bus/usb/drivers/usbip-host/{busid}")
                     status_line = "Shared" if is_bound else "Not shared"
                 
@@ -184,6 +178,13 @@ def get_8bitdo_devices():
                     "mode": mode,
                     "line": status_line
                 })
+    
+    # Diagnostic print if it changes
+    global last_diagnostic_ids
+    if 'last_diagnostic_ids' not in globals() or last_diagnostic_ids != all_usb_ids:
+        log(f"All USB IDs seen on bus: {', '.join(all_usb_ids)}")
+        last_diagnostic_ids = all_usb_ids
+
     return bitdo_devs
 
 def bind_8bitdo(devices):
