@@ -8,7 +8,7 @@ import os
 
 # Known 8BitDo Hardware IDs (Native and Emulated modes)
 HWID_MAP = {
-    "2dc8:3105": "8BitDo Idle Adapter (Ignored)",
+    "2dc8:3105": "8BitDo Receiver (Searching)",
     "2dc8:3107": "8BitDo Ultimate (D-Mode)",
     "2dc8:3106": "8BitDo Ultimate (X-Mode)",
     "057e:2009": "Switch Pro (S-Mode)",
@@ -210,9 +210,10 @@ def print_mode_shortcuts():
     """Prints the button shortcuts for changing 8BitDo controller modes."""
     log("-----------------------------------")
     log("8BitDo Controller Mode Shortcuts:")
-    log("  [S] Switch Mode:  Hold [Minus] + [LB] for 5s -> ID: 057e:2009")
-    log("  [X] X-Input:      Hold [Minus] + [UP] for 5s -> ID: 045e:028e")
-    log("  [D] D-Input:      Hold [Minus] + [LEFT] for 5s -> ID: 2dc8:3107")
+    log("  [S] Switch Mode:  Hold [Minus] + [Y] for 5s -> ID: 057e:2009")
+    log("  [X] X-Input:      Hold [Minus] + [X] for 5s -> ID: 2dc8:3106")
+    log("  [D] D-Input:      Hold [Minus] + [B] for 5s -> ID: 2dc8:3107")
+    log("  [Idle] Searching: Baseline receiver state     -> ID: 2dc8:3105")
     log("  (Note: Hold until the controller vibrates)")
     log("-----------------------------------")
 
@@ -227,7 +228,7 @@ def main():
         sys.exit(1)
 
     server_ip = get_ip_address()
-    log("--- USBIP 8BitDo Manager (v2.2) ---")
+    log("--- USBIP 8BitDo Manager (v2.2.3) ---")
     log(f"Server IP Address: {server_ip}")
     print_mode_shortcuts()
     
