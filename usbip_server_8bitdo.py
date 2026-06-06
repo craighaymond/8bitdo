@@ -210,9 +210,9 @@ def print_mode_shortcuts():
     """Prints the button shortcuts for changing 8BitDo controller modes."""
     log("-----------------------------------")
     log("8BitDo Controller Mode Shortcuts:")
-    log("  [S] Switch Mode:  Hold [Minus/Select] + [LB] for 5s")
-    log("  [X] X-Input:      Hold [Minus/Select] + [UP] for 5s")
-    log("  [D] D-Input:      Hold [Minus/Select] + [LEFT] for 5s")
+    log("  [S] Switch Mode:  Hold [Minus] + [LB] for 5s -> ID: 057e:2009")
+    log("  [X] X-Input:      Hold [Minus] + [UP] for 5s -> ID: 045e:028e")
+    log("  [D] D-Input:      Hold [Minus] + [LEFT] for 5s -> ID: 2dc8:3107")
     log("  (Note: Hold until the controller vibrates)")
     log("-----------------------------------")
 
