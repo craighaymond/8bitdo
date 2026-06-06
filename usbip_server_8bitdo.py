@@ -8,6 +8,7 @@ import os
 
 # Known 8BitDo Hardware IDs (Native and Emulated modes)
 HWID_MAP = {
+    "2dc8:3105": "8BitDo Idle Adapter (Ignored)",
     "2dc8:3107": "8BitDo Ultimate (D-Mode)",
     "2dc8:3106": "8BitDo Ultimate (X-Mode)",
     "057e:2009": "Switch Pro (S-Mode)",
