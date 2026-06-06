@@ -10,11 +10,15 @@ import os
 HWID_MAP = {
     "2dc8": "Native",
     "057e:2009": "Switch",
-    "045e:028e": "X-Input"
+    "045e:028e": "X-Input",
+    "045e:02d1": "Xbox One",
+    "054c:05c4": "PS4",
+    "054c:09cc": "PS4 v2",
+    "054c:0ce6": "PS5"
 }
 TARGET_HWIDS = list(HWID_MAP.keys())
 
-POLL_INTERVAL = 60  # Seconds between checks (1 minute)
+POLL_INTERVAL = 5  # Seconds between checks (5 seconds)
 USBIP_PORT = 3240
 
 IS_WINDOWS = sys.platform == "win32"
@@ -40,20 +44,35 @@ def get_ip_address():
         try:
             return socket.gethostbyname(socket.gethostname())
         except:
-            return "Unknown"
+            return "127.0.0.1"
 
 def get_connected_clients():
     """Returns a list of unique client IP addresses connected to the USBIP port."""
     clients = set()
     try:
-        # Run netstat to find established connections on the USBIP port
-        output = subprocess.run(["netstat", "-an"], capture_output=True, text=True).stdout
+        # Try netstat first
+        try:
+            output = subprocess.run(["netstat", "-an"], capture_output=True, text=True).stdout
+        except FileNotFoundError:
+            # Fallback to ss
+            output = subprocess.run(["ss", "-H", "-n", "-t", "state", "established", f"( sport = :{USBIP_PORT} )"], capture_output=True, text=True).stdout
+        
         # Flexible regex for both Windows (TCP) and Linux (tcp)
+        # For netstat
         pattern = re.compile(rf":{USBIP_PORT}\s+([\d\.]+):\d+\s+ESTABLISHED", re.IGNORECASE)
         matches = pattern.findall(output)
         for ip in matches:
-            if ip != "0.0.0.0" and ip != "127.0.0.1":
+            if ip != "0.0.0.0" and ip != "127.0.0.1" and ip != "::1":
                 clients.add(ip)
+        
+        # For ss output (if netstat failed or was different)
+        if not clients:
+            # ss output format: tcp ESTAB 0 0 192.168.0.46:3240 192.168.0.232:54321
+            ss_pattern = re.compile(rf"\s+[\d\.]+:({USBIP_PORT})\s+([\d\.]+):\d+")
+            ss_matches = ss_pattern.findall(output)
+            for port, ip in ss_matches:
+                if ip != "127.0.0.1" and ip != "::1":
+                    clients.add(ip)
     except Exception:
         pass
     return sorted(list(clients))
@@ -65,7 +84,10 @@ def is_admin():
         return ctypes.windll.shell32.IsUserAnAdmin()
     except AttributeError:
         # Linux/Unix check - windll doesn't exist on non-Windows
-        return os.geteuid() == 0
+        try:
+            return os.geteuid() == 0
+        except AttributeError:
+            return False
 
 def run_command(command, exit_on_fail=True, silent_fail=False):
     """Executes a command and returns stdout. Gracefully handles failures if requested."""
@@ -79,7 +101,7 @@ def run_command(command, exit_on_fail=True, silent_fail=False):
         return None
     except subprocess.CalledProcessError as e:
         if not silent_fail:
-            log(f"Error running command {' '.join(command)}: {e.stderr}")
+            log(f"Error running command {' '.join(command)}: {e.stderr or e.stdout}")
         if exit_on_fail: sys.exit(1)
         return None
 
@@ -96,16 +118,37 @@ def get_8bitdo_devices():
     bitdo_devs = []
     lines = output.splitlines()
     for i, line in enumerate(lines):
+        # Flexible regex for busid and HWID
+        # Examples:
+        #   - busid 1-1.2 (046d:c52b)
+        #   - 1-1: unknown vendor : unknown product (046d:c52b)
+        #   1-1  045e:028e  Xbox 360 Controller
+        
+        busid = None
+        hwid_raw = None
+        
         if IS_WINDOWS:
             match = re.search(r"^\s*([\d-]+)\s+([a-fA-F\d]{4}:[a-fA-F\d]{4})", line)
+            if match:
+                busid, hwid_raw = match.group(1), match.group(2).lower()
         else:
-            # Match lines like: " - busid 1-1.2 (046d:c52b)"
+            # Linux patterns
+            # Pattern 1: " - busid 1-1 (045e:028e)"
             match = re.search(r"busid\s+([\d\-\.]+)\s+\(([a-fA-F\d]{4}:[a-fA-F\d]{4})\)", line)
+            if match:
+                busid, hwid_raw = match.group(1), match.group(2).lower()
+            else:
+                # Pattern 2: " - 1-1: ... (045e:028e)"
+                match = re.search(r"-\s+([\d\-\.]+):\s+.*\(([a-fA-F\d]{4}:[a-fA-F\d]{4})\)", line)
+                if match:
+                    busid, hwid_raw = match.group(1), match.group(2).lower()
+                else:
+                    # Pattern 3: "1-1: ... (045e:028e)"
+                    match = re.search(r"^([\d\-\.]+):\s+.*\(([a-fA-F\d]{4}:[a-fA-F\d]{4})\)", line)
+                    if match:
+                        busid, hwid_raw = match.group(1), match.group(2).lower()
             
-        if match:
-            busid = match.group(1)
-            hwid_raw = match.group(2).lower()
-            
+        if busid and hwid_raw:
             # Identify the mode
             mode = "Unknown"
             is_match = False
@@ -115,24 +158,26 @@ def get_8bitdo_devices():
                     is_match = True
                     break
             
-            if not is_match:
-                # Check current line or next line (Linux) for "8bitdo"
-                search_text = line.lower()
-                if not IS_WINDOWS and i + 1 < len(lines):
-                    search_text += " " + lines[i+1].lower()
-                
-                if "8bitdo" in search_text:
-                    mode = "Native"
-                    is_match = True
+            # Check current line or next line for "8bitdo"
+            search_text = line.lower()
+            if i + 1 < len(lines):
+                search_text += " " + lines[i+1].lower()
+            
+            if "8bitdo" in search_text:
+                if mode == "Unknown": mode = "Native"
+                is_match = True
+            
+            if IS_WINDOWS:
+                status_line = line.strip()
+            else:
+                # Check if bound to usbip-host
+                is_bound = os.path.exists(f"/sys/bus/usb/drivers/usbip-host/{busid}")
+                status_line = "Shared" if is_bound else "Not shared"
+            
+            # Diagnostic: log all found devices if they have HWID
+            # log(f"Found Device: {busid} ({hwid_raw}) - {mode} [Match: {is_match}]")
             
             if is_match:
-                if IS_WINDOWS:
-                    status_line = line.strip()
-                else:
-                    # Check if bound to usbip-host
-                    is_bound = os.path.exists(f"/sys/bus/usb/drivers/usbip-host/{busid}")
-                    status_line = "Shared" if is_bound else "Not shared"
-                
                 bitdo_devs.append({
                     "busid": busid, 
                     "hwid": hwid_raw, 
