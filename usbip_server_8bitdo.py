@@ -175,6 +175,12 @@ def main():
     log(f"Server IP Address: {server_ip}")
     log("-----------------------------------")
     
+    if not IS_WINDOWS:
+        log("Ensuring kernel modules are loaded and usbipd daemon is running...")
+        run_command(["modprobe", "usbip-core"], exit_on_fail=False, silent_fail=True)
+        run_command(["modprobe", "usbip-host"], exit_on_fail=False, silent_fail=True)
+        run_command(["usbipd", "-D"], exit_on_fail=False, silent_fail=True)
+
     log("Initial cleanup: Unbinding ALL currently shared USB devices...")
     if IS_WINDOWS:
         run_command([USBIP_CMD, "unbind", "--all"], exit_on_fail=False, silent_fail=True)

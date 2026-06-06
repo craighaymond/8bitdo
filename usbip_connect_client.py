@@ -30,33 +30,40 @@ def ensure_joy_cpl_running():
         except Exception as e:
             print_log(f"Failed to launch joy.cpl: {e}")
 
-def get_local_subnet():
-    """Returns the base subnet (e.g., '192.168.0.') for the current local IP."""
+def get_local_subnets():
+    """Returns a list of potential subnets to scan."""
+    subnets = []
     try:
-        # Get the primary local IP address
+        # Get the primary local IP address without needing internet access
         with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as s:
-            s.connect(("8.8.8.8", 80))
+            s.connect(("10.255.255.255", 1))
             local_ip = s.getsockname()[0]
-        # Common subnets are /24
+        
         parts = local_ip.split('.')
-        return ".".join(parts[:-1]) + "."
+        if len(parts) == 4 and not local_ip.startswith("127."):
+            subnets.append(".".join(parts[:-1]) + ".")
     except Exception:
-        return None
+        pass
+        
+    # Add common home subnets as fallback if they aren't already there
+    for default in ["192.168.0.", "192.168.1."]:
+        if default not in subnets:
+            subnets.append(default)
+    return subnets
 
 def find_usbip_server():
-    """Scans the local subnet for port 3240."""
-    subnet = get_local_subnet()
-    if not subnet:
-        return None
+    """Scans subnets for port 3240."""
+    potential_subnets = get_local_subnets()
     
-    # Iterate through potential host IDs (1 to 254)
-    # 0.05s timeout is generally safe for local LAN
-    for i in range(1, 255):
-        ip = f"{subnet}{i}"
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-            s.settimeout(0.05)
-            if s.connect_ex((ip, PORT)) == 0:
-                return ip
+    for subnet in potential_subnets:
+        print_log(f"Scanning subnet {subnet}0/24...")
+        # Iterate through potential host IDs (1 to 254)
+        for i in range(1, 255):
+            ip = f"{subnet}{i}"
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.08) # Slightly increased timeout for better reliability
+                if s.connect_ex((ip, PORT)) == 0:
+                    return ip
     return None
 
 def detect_mode(description):
@@ -157,9 +164,13 @@ def list_local_attachments():
         return {}
 
 def main():
-    server_ip = None
+    # Allow manual IP override via command line
+    manual_ip = sys.argv[1] if len(sys.argv) > 1 else None
+    server_ip = manual_ip
     
     print_log("USBIP Connect Client started. Press Ctrl+C to stop.")
+    if manual_ip:
+        print_log(f"Targeting specific server: {manual_ip}")
     
     try:
         while True:
@@ -172,7 +183,7 @@ def main():
                 if server_ip:
                     print_log(f"Found usbipd server at {server_ip}")
                 else:
-                    print_log("Could not find usbipd server. Retrying in 60s.")
+                    print_log("Could not find usbipd server. Retrying in 30s.")
             
             if server_ip:
                 # 1. Get local attachments with descriptions
@@ -182,9 +193,12 @@ def main():
                 devices = list_devices(server_ip)
                 
                 if not devices:
-                    if find_usbip_server() != server_ip:
-                        print_log(f"Server {server_ip} lost.")
+                    # If we have a manual IP, don't clear it immediately, just log
+                    if not manual_ip:
+                        print_log(f"Server {server_ip} unresponsive or no devices. Re-scanning...")
                         server_ip = None
+                    else:
+                        print_log(f"Waiting for devices on {server_ip}...")
                 else:
                     for busid, description, mode, is_controller in devices:
                         # ONLY attach if it looks like a controller
