@@ -147,27 +147,29 @@ def get_8bitdo_devices():
         if busid and hwid_raw:
             # Identify the mode
             mode = "Unknown"
+            is_ignored = False
             is_valid_controller = False
+            
             for target_id, target_name in HWID_MAP.items():
                 if target_id.lower() in hwid_raw:
                     mode = target_name
-                    # Only mark as valid if it's NOT explicitly ignored
-                    if "Ignored" not in target_name:
+                    if "Ignored" in target_name:
+                        is_ignored = True
+                    else:
                         is_valid_controller = True
                     break
             
-            # Check current line or next line for "8bitdo"
-            search_text = line.lower()
-            if i + 1 < len(lines):
-                search_text += " " + lines[i+1].lower()
-            
-            if "8bitdo" in search_text:
-                if mode == "Unknown": 
-                    mode = "Native"
+            # Fallback for generic 8bitdo string but ONLY if not already ignored
+            if not is_ignored and not is_valid_controller:
+                search_text = line.lower()
+                if i + 1 < len(lines):
+                    search_text += " " + lines[i+1].lower()
+                
+                if "8bitdo" in search_text:
+                    mode = "8BitDo Device"
                     is_valid_controller = True
-                # If it's already "Ignored", don't set is_valid_controller
             
-            if is_valid_controller:
+            if is_valid_controller and not is_ignored:
                 if IS_WINDOWS:
                     status_line = line.strip()
                 else:
