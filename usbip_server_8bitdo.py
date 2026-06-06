@@ -200,11 +200,12 @@ def bind_8bitdo(devices):
             else:
                 cmd = [USBIP_CMD, "bind", "-b", dev['busid']]
                 
-            result = run_command(cmd, exit_on_fail=False, silent_fail=True)
-            if result is not None:
+            try:
+                result = subprocess.run(cmd, capture_output=True, text=True, check=True)
                 print("Successfully bound.")
-            else:
-                print("Failed.")
+            except subprocess.CalledProcessError as e:
+                error_msg = (e.stderr or e.stdout or "Unknown error").strip()
+                print(f"Failed: {error_msg}")
 
 def print_mode_shortcuts():
     """Prints the button shortcuts for changing 8BitDo controller modes."""
