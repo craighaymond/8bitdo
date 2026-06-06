@@ -17,6 +17,9 @@ TARGET_HWIDS = list(HWID_MAP.keys())
 POLL_INTERVAL = 60  # Seconds between checks (1 minute)
 USBIP_PORT = 3240
 
+IS_WINDOWS = sys.platform == "win32"
+USBIP_CMD = "usbipd" if IS_WINDOWS else "usbip"
+
 def get_timestamp():
     """Returns a formatted timestamp string [YYYY-MM-DD HH:MM:SS]."""
     return time.strftime("[%Y-%m-%d %H:%M:%S]")
@@ -45,8 +48,9 @@ def get_connected_clients():
     try:
         # Run netstat to find established connections on the USBIP port
         output = subprocess.run(["netstat", "-an"], capture_output=True, text=True).stdout
-        pattern = rf"TCP\s+\S+:{USBIP_PORT}\s+([\d\.]+):\d+\s+ESTABLISHED"
-        matches = re.findall(pattern, output)
+        # Flexible regex for both Windows (TCP) and Linux (tcp)
+        pattern = re.compile(rf":{USBIP_PORT}\s+([\d\.]+):\d+\s+ESTABLISHED", re.IGNORECASE)
+        matches = pattern.findall(output)
         for ip in matches:
             if ip != "0.0.0.0" and ip != "127.0.0.1":
                 clients.add(ip)
@@ -81,15 +85,23 @@ def run_command(command, exit_on_fail=True, silent_fail=False):
 
 def get_8bitdo_devices():
     """Returns a list of 8BitDo devices found on the system."""
-    # Use silent_fail=True in the loop to keep script alive if usbipd is busy
-    output = run_command(["usbipd", "list"], exit_on_fail=False, silent_fail=True)
+    if IS_WINDOWS:
+        output = run_command([USBIP_CMD, "list"], exit_on_fail=False, silent_fail=True)
+    else:
+        output = run_command([USBIP_CMD, "list", "-l"], exit_on_fail=False, silent_fail=True)
+        
     if not output:
         return []
 
     bitdo_devs = []
     lines = output.splitlines()
-    for line in lines:
-        match = re.search(r"^\s*([\d-]+)\s+([a-fA-F\d]{4}:[a-fA-F\d]{4})", line)
+    for i, line in enumerate(lines):
+        if IS_WINDOWS:
+            match = re.search(r"^\s*([\d-]+)\s+([a-fA-F\d]{4}:[a-fA-F\d]{4})", line)
+        else:
+            # Match lines like: " - busid 1-1.2 (046d:c52b)"
+            match = re.search(r"busid\s+([\d\-\.]+)\s+\(([a-fA-F\d]{4}:[a-fA-F\d]{4})\)", line)
+            
         if match:
             busid = match.group(1)
             hwid_raw = match.group(2).lower()
@@ -103,16 +115,29 @@ def get_8bitdo_devices():
                     is_match = True
                     break
             
-            if not is_match and "8bitdo" in line.lower():
-                mode = "Native"
-                is_match = True
+            if not is_match:
+                # Check current line or next line (Linux) for "8bitdo"
+                search_text = line.lower()
+                if not IS_WINDOWS and i + 1 < len(lines):
+                    search_text += " " + lines[i+1].lower()
+                
+                if "8bitdo" in search_text:
+                    mode = "Native"
+                    is_match = True
             
             if is_match:
+                if IS_WINDOWS:
+                    status_line = line.strip()
+                else:
+                    # Check if bound to usbip-host
+                    is_bound = os.path.exists(f"/sys/bus/usb/drivers/usbip-host/{busid}")
+                    status_line = "Shared" if is_bound else "Not shared"
+                
                 bitdo_devs.append({
                     "busid": busid, 
                     "hwid": hwid_raw, 
                     "mode": mode,
-                    "line": line.strip()
+                    "line": status_line
                 })
     return bitdo_devs
 
@@ -122,9 +147,14 @@ def bind_8bitdo(devices):
     for dev in devices:
         if "Not shared" in dev['line']:
             ts = get_timestamp()
-            # Use --force for more reliable takeover from Windows HID driver
             print(f"{ts}   > Binding {dev['busid']} ({dev['hwid']} - {dev['mode']})... ", end='', flush=True)
-            result = run_command(["usbipd", "bind", "--force", "--busid", dev['busid']], exit_on_fail=False, silent_fail=True)
+            if IS_WINDOWS:
+                # Use --force for more reliable takeover from Windows HID driver
+                cmd = [USBIP_CMD, "bind", "--force", "--busid", dev['busid']]
+            else:
+                cmd = [USBIP_CMD, "bind", "-b", dev['busid']]
+                
+            result = run_command(cmd, exit_on_fail=False, silent_fail=True)
             if result is not None:
                 print("Successfully bound.")
             else:
@@ -146,7 +176,20 @@ def main():
     log("-----------------------------------")
     
     log("Initial cleanup: Unbinding ALL currently shared USB devices...")
-    run_command(["usbipd", "unbind", "--all"], exit_on_fail=False, silent_fail=True)
+    if IS_WINDOWS:
+        run_command([USBIP_CMD, "unbind", "--all"], exit_on_fail=False, silent_fail=True)
+    else:
+        # On Linux, manual unbind of all currently bound devices
+        try:
+            usbip_host_path = "/sys/bus/usb/drivers/usbip-host/"
+            if os.path.exists(usbip_host_path):
+                bound_devs = os.listdir(usbip_host_path)
+                for busid in bound_devs:
+                    # Simple check for valid busid format (e.g., 1-1 or 1-1.2)
+                    if re.match(r"^\d+-\d+(\.\d+)*$", busid):
+                        run_command([USBIP_CMD, "unbind", "-b", busid], exit_on_fail=False, silent_fail=True)
+        except Exception:
+            pass
 
     log(f"Entering polling loop (Interval: {POLL_INTERVAL}s).")
     log("The script will automatically bind any 8BitDo devices found.")
@@ -173,13 +216,13 @@ def main():
 
             if not_shared_devs:
                 # Clear heartbeat line
-                print(" " * 120, end='\r')
+                print("\r" + " " * 120 + "\r", end='', flush=True)
                 log(f"Detected {len(not_shared_devs)} unbound device(s) in {mode_str} mode(s).")
                 bind_8bitdo(not_shared_devs)
             else:
                 # Heartbeat message
                 msg = f"{get_timestamp()} Polling: {waiting_count} Waiting, {in_use_count} In-Use ({mode_str}){client_info}"
-                print(msg.ljust(120), end='\r', flush=True)
+                print("\r" + msg.ljust(120), end='', flush=True)
             
             time.sleep(POLL_INTERVAL)
     except KeyboardInterrupt:
