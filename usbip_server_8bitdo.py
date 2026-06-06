@@ -245,7 +245,10 @@ def main():
         run_command(["modprobe", "usbip-core"], exit_on_fail=False, silent_fail=True)
         
         # Restart the daemon - Try common paths
-        run_command(["pkill", "usbipd"], exit_on_fail=False, silent_fail=True)
+        log("Killing any existing usbipd processes and clearing port 3240...")
+        run_command(["pkill", "-9", "usbipd"], exit_on_fail=False, silent_fail=True)
+        # Fallback: use fuser to kill anything on the usbip port if fuser is available
+        run_command(["fuser", "-k", "3240/tcp"], exit_on_fail=False, silent_fail=True)
         time.sleep(1)
         
         log("Starting usbipd daemon...")
