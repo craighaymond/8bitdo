@@ -236,14 +236,31 @@ def main():
     else:
         log("Initial cleanup (Linux): Resetting usbip-host kernel module...")
         # Forcefully unbind everything by reloading the kernel modules
-        run_command(["usbip", "unbind", "--all"], exit_on_fail=False, silent_fail=True) # Try the command if it exists
+        run_command(["usbip", "unbind", "--all"], exit_on_fail=False, silent_fail=True)
         run_command(["modprobe", "-r", "usbip-host"], exit_on_fail=False, silent_fail=True)
         run_command(["modprobe", "usbip-host"], exit_on_fail=False, silent_fail=True)
         run_command(["modprobe", "usbip-core"], exit_on_fail=False, silent_fail=True)
-        # Restart the daemon
+        
+        # Restart the daemon - Try common paths
         run_command(["pkill", "usbipd"], exit_on_fail=False, silent_fail=True)
         time.sleep(1)
-        run_command(["usbipd", "-D"], exit_on_fail=False, silent_fail=True)
+        
+        log("Starting usbipd daemon...")
+        daemon_started = False
+        for cmd in ["usbipd", "/usr/sbin/usbipd", "/usr/lib/linux-tools/$(uname -r)/usbipd"]:
+            # Evaluate $(uname -r) if needed
+            if "$(uname -r)" in cmd:
+                kernel_v = subprocess.run(["uname", "-r"], capture_output=True, text=True).stdout.strip()
+                cmd = cmd.replace("$(uname -r)", kernel_v)
+            
+            res = run_command([cmd, "-D"], exit_on_fail=False, silent_fail=True)
+            if res is not None:
+                log(f"Daemon started successfully using: {cmd}")
+                daemon_started = True
+                break
+        
+        if not daemon_started:
+            log("WARNING: Could not start usbipd daemon. Remote clients will not be able to connect.")
 
     log(f"Entering polling loop (Interval: {POLL_INTERVAL}s).")
     log("The script will automatically bind any 8BitDo devices found.")
