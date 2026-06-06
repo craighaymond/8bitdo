@@ -206,6 +206,16 @@ def bind_8bitdo(devices):
             else:
                 print("Failed.")
 
+def print_mode_shortcuts():
+    """Prints the button shortcuts for changing 8BitDo controller modes."""
+    log("-----------------------------------")
+    log("8BitDo Controller Mode Shortcuts:")
+    log("  [S] Switch Mode:  Hold [Minus/Select] + [LB] for 5s")
+    log("  [X] X-Input:      Hold [Minus/Select] + [UP] for 5s")
+    log("  [D] D-Input:      Hold [Minus/Select] + [LEFT] for 5s")
+    log("  (Note: Hold until the controller vibrates)")
+    log("-----------------------------------")
+
 def main():
     if sys.platform not in ["win32", "linux"]:
         log(f"Unsupported platform: {sys.platform}")
@@ -217,9 +227,9 @@ def main():
         sys.exit(1)
 
     server_ip = get_ip_address()
-    log("--- USBIP 8BitDo Manager (v2.1) ---")
+    log("--- USBIP 8BitDo Manager (v2.2) ---")
     log(f"Server IP Address: {server_ip}")
-    log("-----------------------------------")
+    print_mode_shortcuts()
     
     if IS_WINDOWS:
         log("Initial cleanup: Unbinding ALL currently shared USB devices...")
