@@ -264,7 +264,7 @@ def main():
             current_status_list = []
             for d in bitdo_devs:
                 status = "Attached" if "Attached" in d['line'] else "Waiting" if "Shared" in d['line'] else "Not Shared"
-                current_status_list.append(f"{d['busid']}:{d['mode']}:{status}")
+                current_status_list.append(f"{d['busid']}:{d['hwid']}:{d['mode']}:{status}")
             
             clients = get_connected_clients()
             status_hash = hash(tuple(current_status_list) + tuple(clients))
@@ -284,7 +284,7 @@ def main():
                     print("   [None]")
                 for d in bitdo_devs:
                     status = "IN-USE (Attached)" if "Attached" in d['line'] else "READY (Waiting)" if "Shared" in d['line'] else "IDLE (Not shared)"
-                    print(f"   - {d['busid']}: {d['mode']} [{status}]")
+                    print(f"   - {d['busid']} ({d['hwid']}): {d['mode']} [{status}]")
                 
                 if clients:
                     print(f"   Connected Clients: {', '.join(clients)}")
