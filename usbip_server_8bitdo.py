@@ -8,13 +8,14 @@ import os
 
 # Known 8BitDo Hardware IDs (Native and Emulated modes)
 HWID_MAP = {
-    "2dc8": "Native",
-    "057e:2009": "Switch",
-    "045e:028e": "X-Input",
+    "2dc8:3107": "8BitDo Ultimate (D-Mode)",
+    "2dc8:3106": "8BitDo Ultimate (X-Mode)",
+    "057e:2009": "Switch Pro (S-Mode)",
+    "045e:028e": "Xbox 360 (X-Input)",
     "045e:02d1": "Xbox One",
-    "054c:05c4": "PS4",
-    "054c:09cc": "PS4 v2",
-    "054c:0ce6": "PS5"
+    "054c:05c4": "PS4 (D-Mode)",
+    "054c:0ce6": "PS5 (D-Mode)",
+    "2dc8": "8BitDo Device"
 }
 TARGET_HWIDS = list(HWID_MAP.keys())
 
@@ -246,6 +247,8 @@ def main():
     log("The script will automatically bind any 8BitDo devices found.")
     log("Press Ctrl+C to exit.\n")
 
+    last_status_hash = None
+
     try:
         while True:
             bitdo_devs = get_8bitdo_devices()
@@ -255,25 +258,45 @@ def main():
             in_use_count = sum(1 for d in bitdo_devs if "Attached" in d['line'])
             not_shared_devs = [d for d in bitdo_devs if "Not shared" in d['line']]
             
-            # Mode summary (e.g., "1 Switch, 1 X-Input")
-            modes_seen = {}
+            # Create a status hash to detect changes
+            current_status_list = []
             for d in bitdo_devs:
-                modes_seen[d['mode']] = modes_seen.get(d['mode'], 0) + 1
-            mode_str = ", ".join([f"{count} {m}" for m, count in modes_seen.items()]) if modes_seen else "None"
-
-            # Client info
+                status = "Attached" if "Attached" in d['line'] else "Waiting" if "Shared" in d['line'] else "Not Shared"
+                current_status_list.append(f"{d['busid']}:{d['mode']}:{status}")
+            
             clients = get_connected_clients()
-            client_info = f" | Clients: {', '.join(clients)}" if clients else " | No clients"
+            status_hash = hash(tuple(current_status_list) + tuple(clients))
 
-            if not_shared_devs:
+            if status_hash != last_status_hash:
                 # Clear heartbeat line
                 print("\r" + " " * 120 + "\r", end='', flush=True)
-                log(f"Detected {len(not_shared_devs)} unbound device(s) in {mode_str} mode(s).")
-                bind_8bitdo(not_shared_devs)
-            else:
-                # Heartbeat message
-                msg = f"{get_timestamp()} Polling: {waiting_count} Waiting, {in_use_count} In-Use ({mode_str}){client_info}"
-                print("\r" + msg.ljust(120), end='', flush=True)
+                
+                if not_shared_devs:
+                    log(f"Detected {len(not_shared_devs)} unbound device(s).")
+                    bind_8bitdo(not_shared_devs)
+                    # Refresh devs after binding
+                    bitdo_devs = get_8bitdo_devices()
+                
+                log("Current Controller Status:")
+                if not bitdo_devs:
+                    print("   [None]")
+                for d in bitdo_devs:
+                    status = "IN-USE (Attached)" if "Attached" in d['line'] else "READY (Waiting)" if "Shared" in d['line'] else "IDLE (Not shared)"
+                    print(f"   - {d['busid']}: {d['mode']} [{status}]")
+                
+                if clients:
+                    print(f"   Connected Clients: {', '.join(clients)}")
+                print("-" * 50)
+                last_status_hash = status_hash
+
+            # Heartbeat message
+            mode_counts = {}
+            for d in bitdo_devs:
+                mode_counts[d['mode']] = mode_counts.get(d['mode'], 0) + 1
+            mode_summary = ", ".join([f"{c} {m}" for m, c in mode_counts.items()]) if mode_counts else "None"
+            
+            msg = f"{get_timestamp()} Polling: {waiting_count} Waiting, {in_use_count} In-Use ({mode_summary})"
+            print("\r" + msg.ljust(120), end='', flush=True)
             
             time.sleep(POLL_INTERVAL)
     except KeyboardInterrupt:
