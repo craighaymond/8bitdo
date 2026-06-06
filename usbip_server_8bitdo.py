@@ -217,31 +217,24 @@ def main():
         sys.exit(1)
 
     server_ip = get_ip_address()
-    log("--- USBIP 8BitDo Manager (v2.0) ---")
+    log("--- USBIP 8BitDo Manager (v2.1) ---")
     log(f"Server IP Address: {server_ip}")
     log("-----------------------------------")
     
-    if not IS_WINDOWS:
-        log("Ensuring kernel modules are loaded and usbipd daemon is running...")
-        run_command(["modprobe", "usbip-core"], exit_on_fail=False, silent_fail=True)
-        run_command(["modprobe", "usbip-host"], exit_on_fail=False, silent_fail=True)
-        run_command(["usbipd", "-D"], exit_on_fail=False, silent_fail=True)
-
-    log("Initial cleanup: Unbinding ALL currently shared USB devices...")
     if IS_WINDOWS:
+        log("Initial cleanup: Unbinding ALL currently shared USB devices...")
         run_command([USBIP_CMD, "unbind", "--all"], exit_on_fail=False, silent_fail=True)
     else:
-        # On Linux, manual unbind of all currently bound devices
-        try:
-            usbip_host_path = "/sys/bus/usb/drivers/usbip-host/"
-            if os.path.exists(usbip_host_path):
-                bound_devs = os.listdir(usbip_host_path)
-                for busid in bound_devs:
-                    # Simple check for valid busid format (e.g., 1-1 or 1-1.2)
-                    if re.match(r"^\d+-\d+(\.\d+)*$", busid):
-                        run_command([USBIP_CMD, "unbind", "-b", busid], exit_on_fail=False, silent_fail=True)
-        except Exception:
-            pass
+        log("Initial cleanup (Linux): Resetting usbip-host kernel module...")
+        # Forcefully unbind everything by reloading the kernel modules
+        run_command(["usbip", "unbind", "--all"], exit_on_fail=False, silent_fail=True) # Try the command if it exists
+        run_command(["modprobe", "-r", "usbip-host"], exit_on_fail=False, silent_fail=True)
+        run_command(["modprobe", "usbip-host"], exit_on_fail=False, silent_fail=True)
+        run_command(["modprobe", "usbip-core"], exit_on_fail=False, silent_fail=True)
+        # Restart the daemon
+        run_command(["pkill", "usbipd"], exit_on_fail=False, silent_fail=True)
+        time.sleep(1)
+        run_command(["usbipd", "-D"], exit_on_fail=False, silent_fail=True)
 
     log(f"Entering polling loop (Interval: {POLL_INTERVAL}s).")
     log("The script will automatically bind any 8BitDo devices found.")
