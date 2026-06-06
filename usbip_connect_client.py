@@ -182,22 +182,37 @@ def attach_device(server_ip, busid, description, mode):
 def list_local_attachments():
     """Lists locally attached usbip devices and returns a mapping of (server_ip, busid) -> description."""
     try:
+        # Use shell=True for better output handling on Windows if needed, but subprocess.run is usually fine
         result = subprocess.run(["usbip", "port"], capture_output=True, text=True, check=True, timeout=5)
         attachments = {}
         lines = result.stdout.splitlines()
+        
+        # Example output:
+        # Port 01: device in use at Full Speed(12Mbps)
+        #          8BitDo : unknown product (2dc8:3107)
+        #            -> usbip://192.168.0.46:3240/1-1.4
+        
+        current_port = None
         current_desc = "Unknown Device"
         
         for line in lines:
-            # Look for the description line (indented, no '->', no 'Port' or 'Imported')
-            if re.search(r"^\s{4,}\S+", line) and "->" not in line and "Port" not in line and "Imported" not in line:
+            # Port header
+            if line.startswith("Port"):
+                current_port = line.split(":")[0].strip()
+                current_desc = "Unknown Device"
+                continue
+                
+            # Description line (usually the first indented line after Port)
+            if current_port and re.search(r"^\s{2,}\S+", line) and "->" not in line:
                 current_desc = line.strip()
             
-            # Look for the connection line (e.g. "1-1.4 -> usbip://...")
-            conn_match = re.search(r"([0-9a-fA-F.-]+)\s+->\s+usbip://([0-9.]+):\d+/([0-9a-fA-F.-]+)", line)
+            # Connection line
+            conn_match = re.search(r"->\s+usbip://([0-9.]+):\d+/([0-9a-fA-F.-]+)", line)
             if conn_match:
-                ip = conn_match.group(2)
-                busid = conn_match.group(3)
+                ip = conn_match.group(1)
+                busid = conn_match.group(2)
                 attachments[(ip, busid)] = current_desc
+                current_port = None # Reset for next port
                 
         return attachments
     except Exception as e:
@@ -253,12 +268,16 @@ def main():
                 else:
                     print_log(f"Server {server_ip} unresponsive, but devices are still attached. Keeping connection.")
             elif not devices: # Command succeeded but list is empty
+                # ONLY re-scan if we don't have ANY local attachments from this server
                 if not has_local_attachments:
                     if not manual_ip:
                         print_log(f"No exportable devices on {server_ip}. Re-scanning...")
                         server_ip = None
                     else:
                         print_log(f"Waiting for devices on {server_ip}...")
+                else:
+                    # We have devices attached, but server reports none available (expected)
+                    pass
             else:
                 # We have devices!
                 for busid, description, mode, is_controller in devices:
@@ -268,14 +287,20 @@ def main():
             # 3. Status reporting
             final_attached = list_local_attachments()
             status_parts = []
+            server_has_attachments = False
             for (ip, busid), desc in final_attached.items():
                 if ip == server_ip:
+                    server_has_attachments = True
                     mode, _ = detect_mode(desc)
                     status_parts.append(f"{busid}: {mode}")
             
             status_str = " | ".join(status_parts) if status_parts else "None"
             server_label = server_ip if server_ip else "None"
             print_log(f"Status: Server {server_label} | Connected: {status_str}")
+            
+            # If we lost the server but still have attachments, don't clear server_ip immediately
+            # if server_ip and not devices and not server_has_attachments:
+            #     # Logic inside step 2 already handles this via has_local_attachments
             
             time.sleep(10) # Reduced poll interval for better responsiveness
     except KeyboardInterrupt:
