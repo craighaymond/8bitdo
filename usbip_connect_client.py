@@ -16,6 +16,7 @@ def get_timestamp():
 
 def print_log(message):
     """Prints a message with a timestamp and flushes stdout."""
+    print("\r" + " " * 100 + "\r", end='', flush=False)
     print(f"{get_timestamp()} {message}")
     sys.stdout.flush()
 
@@ -296,7 +297,8 @@ def main():
             
             status_str = " | ".join(status_parts) if status_parts else "None"
             server_label = server_ip if server_ip else "None"
-            print_log(f"Status: Server {server_label} | Connected: {status_str}")
+            msg = f"{get_timestamp()} Status: Server {server_label} | Connected: {status_str}"
+            print("\r" + msg.ljust(100), end='', flush=True)
             
             # If we lost the server but still have attachments, don't clear server_ip immediately
             # if server_ip and not devices and not server_has_attachments:
