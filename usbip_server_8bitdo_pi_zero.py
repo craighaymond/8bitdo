@@ -170,7 +170,16 @@ def get_8bitdo_devices():
                     status_line = line.strip()
                 else:
                     is_bound = os.path.exists(f"/sys/bus/usb/drivers/usbip-host/{busid}")
-                    status_line = "Shared" if is_bound else "Not shared"
+                    if is_bound:
+                        status_line = "Shared"
+                        try:
+                            with open(f"/sys/bus/usb/drivers/usbip-host/{busid}/usbip_sockfd", "r") as f:
+                                if f.read().strip() != "-1":
+                                    status_line = "Attached"
+                        except Exception:
+                            pass
+                    else:
+                        status_line = "Not shared"
                 
                 bitdo_devs.append({
                     "busid": busid, 
