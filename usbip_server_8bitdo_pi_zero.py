@@ -250,7 +250,15 @@ def bind_8bitdo(devices):
                             f.write(busid)
                         print("Successfully bound.")
                     except Exception as e:
-                        print(f"Failed to bind directly (sysfs): {e}")
+                        if isinstance(e, FileNotFoundError):
+                            print(f"Failed to bind directly (sysfs): {e}")
+                            try:
+                                drivers = os.listdir("/sys/bus/usb/drivers/")
+                                print(f"   [Diagnostic] Available USB drivers: {', '.join(drivers)}")
+                            except Exception:
+                                pass
+                        else:
+                            print(f"Failed to bind directly (sysfs): {e}")
                 except Exception as e:
                     print(f"Failed: {e}")
 
@@ -291,6 +299,14 @@ def main():
         run_command(["modprobe", "usbip-host"], exit_on_fail=False, silent_fail=True)
         run_command(["modprobe", "usbip-core"], exit_on_fail=False, silent_fail=True)
         
+        # Diagnostic print of loaded usb modules
+        try:
+            lsmod_out = subprocess.run(["lsmod"], capture_output=True, text=True).stdout
+            usb_mods = [line.split()[0] for line in lsmod_out.splitlines() if "usb" in line or "vhci" in line]
+            log(f"[Diagnostic] Loaded USB modules: {', '.join(usb_mods)}")
+        except Exception:
+            pass
+            
         # Restart the daemon - Try common paths
         log("Killing any existing usbipd processes and clearing port 3240...")
         run_command(["pkill", "-9", "usbipd"], exit_on_fail=False, silent_fail=True)
