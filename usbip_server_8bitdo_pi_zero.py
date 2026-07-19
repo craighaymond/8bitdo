@@ -22,6 +22,7 @@ TARGET_HWIDS = list(HWID_MAP.keys())
 
 POLL_INTERVAL = 5  # Seconds between checks (5 seconds)
 USBIP_PORT = 3240
+DEBUG = "--debug" in sys.argv or "--diagnostics" in sys.argv
 
 IS_WINDOWS = sys.platform == "win32"
 USBIP_CMD = "usbipd" if IS_WINDOWS else "usbip"
@@ -251,14 +252,16 @@ def bind_8bitdo(devices):
                         print("Successfully bound.")
                     except Exception as e:
                         print(f"Failed to bind directly (sysfs): {e}")
-                        try:
-                            drivers = os.listdir("/sys/bus/usb/drivers/")
-                            print(f"   [Diagnostic] Available USB drivers: {', '.join(drivers)}")
-                            dmesg_out = subprocess.run(["dmesg"], capture_output=True, text=True).stdout
-                            dmesg_usbip = "\n".join([line for line in dmesg_out.splitlines() if "usbip" in line.lower()][-10:])
-                            print(f"   [Diagnostic] dmesg (last 10 usbip lines):\n{dmesg_usbip}")
-                        except Exception:
-                            pass
+                        
+                        if DEBUG:
+                            try:
+                                drivers = os.listdir("/sys/bus/usb/drivers/")
+                                print(f"   [Diagnostic] Available USB drivers: {', '.join(drivers)}")
+                                dmesg_out = subprocess.run(["dmesg"], capture_output=True, text=True).stdout
+                                dmesg_usbip = "\n".join([line for line in dmesg_out.splitlines() if "usbip" in line.lower()][-10:])
+                                print(f"   [Diagnostic] dmesg (last 10 usbip lines):\n{dmesg_usbip}")
+                            except Exception:
+                                pass
                         
                         print(f"   > Falling back to 'usbip bind -b {busid}'...")
                         try:
@@ -314,12 +317,13 @@ def main():
         run_command(["modprobe", "usbip-host"], exit_on_fail=False, silent_fail=True)
         
         # Diagnostic print of loaded usb modules
-        try:
-            lsmod_out = subprocess.run(["lsmod"], capture_output=True, text=True).stdout
-            usb_mods = [line.split()[0] for line in lsmod_out.splitlines() if "usb" in line or "vhci" in line]
-            log(f"[Diagnostic] Loaded USB modules: {', '.join(usb_mods)}")
-        except Exception:
-            pass
+        if DEBUG:
+            try:
+                lsmod_out = subprocess.run(["lsmod"], capture_output=True, text=True).stdout
+                usb_mods = [line.split()[0] for line in lsmod_out.splitlines() if "usb" in line or "vhci" in line]
+                log(f"[Diagnostic] Loaded USB modules: {', '.join(usb_mods)}")
+            except Exception:
+                pass
             
         # Restart the daemon - Try common paths
         log("Killing any existing usbipd processes and clearing port 3240...")
