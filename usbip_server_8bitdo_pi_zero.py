@@ -20,7 +20,7 @@ HWID_MAP = {
 }
 TARGET_HWIDS = list(HWID_MAP.keys())
 
-POLL_INTERVAL = 3  # Seconds between checks (3 seconds)
+POLL_INTERVAL = 0.5  # Seconds between checks (0.5 seconds for aggressive binding)
 USBIP_PORT = 3240
 DEBUG = "--debug" in sys.argv or "--diagnostics" in sys.argv
 
@@ -401,10 +401,9 @@ def main():
                 mode_counts[d['mode']] = mode_counts.get(d['mode'], 0) + 1
             mode_summary = ", ".join([f"{c} {m}" for m, c in mode_counts.items()]) if mode_counts else "None"
             
-            for remaining in range(POLL_INTERVAL, 0, -1):
-                msg = f"{get_timestamp()} Polling: {waiting_count} Waiting, {in_use_count} In-Use ({mode_summary}) | Next poll in {remaining}s..."
-                print("\r" + msg.ljust(120), end='', flush=True)
-                time.sleep(1)
+            msg = f"{get_timestamp()} Polling: {waiting_count} Waiting, {in_use_count} In-Use ({mode_summary})"
+            print("\r" + msg.ljust(120), end='', flush=True)
+            time.sleep(POLL_INTERVAL)
     except KeyboardInterrupt:
         print(f"\n\n{get_timestamp()} Exiting... Devices remain bound in usbipd.")
 
