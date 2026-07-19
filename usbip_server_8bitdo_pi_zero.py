@@ -302,12 +302,11 @@ def main():
         log("Initial cleanup: Unbinding ALL currently shared USB devices...")
         run_command([USBIP_CMD, "unbind", "--all"], exit_on_fail=False, silent_fail=True)
     else:
-        log("Initial cleanup (Linux): Resetting usbip-host kernel module...")
-        # Forcefully unbind everything by reloading the kernel modules
+        log("Initial cleanup (Linux): Ensuring usbip-host kernel module is loaded...")
+        # Forcefully unbind everything first
         run_command(["usbip", "unbind", "--all"], exit_on_fail=False, silent_fail=True)
-        run_command(["modprobe", "-r", "usbip-host"], exit_on_fail=False, silent_fail=True)
-        run_command(["modprobe", "usbip-host"], exit_on_fail=False, silent_fail=True)
         run_command(["modprobe", "usbip-core"], exit_on_fail=False, silent_fail=True)
+        run_command(["modprobe", "usbip-host"], exit_on_fail=False, silent_fail=True)
         
         # Diagnostic print of loaded usb modules
         try:
