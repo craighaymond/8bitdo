@@ -5,6 +5,7 @@ import ctypes
 import socket
 import time
 import os
+import threading
 
 # Known 8BitDo Hardware IDs (Native and Emulated modes)
 HWID_MAP = {
@@ -34,6 +35,24 @@ def get_timestamp():
 def log(msg, end='\n', flush=False):
     """Prints a message with a timestamp prefix."""
     print(f"{get_timestamp()} {msg}", end=end, flush=flush)
+
+def nintendo_guardian_thread():
+    """Runs at 20fps in the background to violently unbind the nintendo driver before it can crash S-Mode adapters."""
+    while True:
+        try:
+            nintendo_dir = "/sys/bus/hid/drivers/nintendo"
+            if os.path.exists(nintendo_dir):
+                for item in os.listdir(nintendo_dir):
+                    if ":" in item:
+                        unbind_path = os.path.join(nintendo_dir, "unbind")
+                        try:
+                            with open(unbind_path, "w") as f:
+                                f.write(item)
+                        except Exception:
+                            pass
+        except Exception:
+            pass
+        time.sleep(0.05)
 
 def get_ip_address():
     """Get the primary local IP address of this machine."""
@@ -305,6 +324,10 @@ def main():
     log("--- USBIP 8BitDo Manager (v2.2.3) ---")
     log(f"Server IP Address: {server_ip}")
     print_mode_shortcuts()
+    
+    # Start the Guardian thread to protect S-Mode
+    if not IS_WINDOWS:
+        threading.Thread(target=nintendo_guardian_thread, daemon=True).start()
     
     if IS_WINDOWS:
         log("Initial cleanup: Unbinding ALL currently shared USB devices...")
