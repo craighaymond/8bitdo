@@ -41,15 +41,15 @@ def main():
         print("  (No 8BitDo or compatible gamepad devices detected)")
         
     modes = [
-        ("X-Input (Xbox/Windows)", "[Minus] + [Up]", "045e:028e (Microsoft Xbox 360 Controller)"),
-        ("D-Input (Android)", "[Minus] + [Left]", "2dc8:3107 or 2dc8:3105 (8BitDo D-Input)"),
-        ("Switch Mode", "[Minus] + [L Bumper]", "057e:2009 (Nintendo Switch Pro Controller)"),
-        ("macOS Mode", "[Minus] + [Right]", "054c:05c4 or 054c:0268 (Sony DualShock)"),
-        ("PS Classic Mode", "[Minus] + [Down]", "054c:0ce6 (Sony PS Classic Controller)"),
-        ("MegaDrive Mini", "[Minus] + [Up] + [Left]", "0f0d:00c1 or similar (Sega/Hori MegaDrive)")
+        ("X-Input (Xbox/Windows)", "[Minus] + [Up]", "045e:028e (Microsoft Xbox 360 Controller)", "[Minus] + [X]  OR  [Share] + [Up]"),
+        ("D-Input (Android)", "[Minus] + [Left]", "2dc8:3107 or 2dc8:3105 (8BitDo D-Input)", "[Minus] + [B]  OR  [Share] + [Left]"),
+        ("Switch Mode", "[Minus] + [L Bumper]", "057e:2009 (Nintendo Switch Pro Controller)", "[Minus] + [Y]  OR  [Share] + [L1]"),
+        ("macOS Mode", "[Minus] + [Right]", "054c:05c4 or 054c:0268 (Sony DualShock)", "[Minus] + [A]  OR  [Share] + [Right]"),
+        ("PS Classic Mode", "[Minus] + [Down]", "054c:0ce6 (Sony PS Classic Controller)", "[Share] + [Down]"),
+        ("MegaDrive Mini", "[Minus] + [Up] + [Left]", "0f0d:00c1 or similar (Sega/Hori MegaDrive)", "[Share] + [Up] + [Left]")
     ]
     
-    for mode_name, combo, expected_id in modes:
+    for mode_name, combo, expected_id, alt_combo in modes:
         print("\n" + "-"*50)
         print(f"Next Mode: {mode_name}")
         print(f"Action: Hold {combo} for 3 seconds.")
@@ -60,13 +60,31 @@ def main():
         time.sleep(1.5) # Allow USB bus to settle just in case
         current_devs = get_usb_devices()
         print(f"\n[Result] Detected USB devices after change:")
+        
+        expected_found = False
         found_any = False
         for d in current_devs:
             if any(vid in d['id'] for vid in known_vids) or "8BitDo" in d['name'].casefold():
                 print(f"  -> ID: {d['id']} | {d['name']}")
                 found_any = True
+                if expected_id.split()[0][:4] in d['id']: # Check if the VID matches the expected VID
+                    expected_found = True
+                    
         if not found_any:
             print("  (No 8BitDo or compatible gamepad devices detected)")
+            
+        if not expected_found:
+            print(f"\n[!] The expected ID was not found. Let's try alternative combos for {mode_name}:")
+            print(f"Alternative Action: Hold {alt_combo} for 3-5 seconds.")
+            print("(Also try using the physical physical X/D switch on the back of the controller if it has one)")
+            input("Press Enter when you have tried the alternative combos...")
+            
+            time.sleep(1.5)
+            current_devs_alt = get_usb_devices()
+            print(f"\n[Result] Detected USB devices after alternative attempt:")
+            for d in current_devs_alt:
+                if any(vid in d['id'] for vid in known_vids) or "8BitDo" in d['name'].casefold():
+                    print(f"  -> ID: {d['id']} | {d['name']}")
                 
     print("\n=========================================")
     print("Walkthrough complete!")
