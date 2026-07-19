@@ -272,12 +272,20 @@ def bind_8bitdo(devices):
 def print_mode_shortcuts():
     """Prints the button shortcuts for changing 8BitDo controller modes."""
     log("-----------------------------------")
-    log("8BitDo Controller Mode Shortcuts:")
+    log("8BitDo Controller Mode Shortcuts (Native Bluetooth):")
     log("  [S] Switch Mode:  Hold [Minus] + [Y] for 5s -> ID: 057e:2009")
     log("  [X] X-Input:      Hold [Minus] + [X] for 5s -> ID: 2dc8:3106")
     log("  [D] D-Input:      Hold [Minus] + [B] for 5s -> ID: 2dc8:3107")
     log("  [Idle] Searching: Baseline receiver state     -> ID: 2dc8:3105")
     log("  (Note: Hold until the controller vibrates)")
+    log("-----------------------------------")
+    log("8BitDo USB Wireless Adapter Shortcuts:")
+    log("  [S] Switch Mode:  Hold [Minus] + [L] for 3s")
+    log("  [X] X-Input:      Hold [Minus] + [Up] for 3s")
+    log("  [D] D-Input:      Hold [Minus] + [Left] for 3s")
+    log("  [Mac] macOS:      Hold [Minus] + [Right] for 3s")
+    log("  [PS] PS Classic:  Hold [Minus] + [Down] for 3s")
+    log("  [MD] MegaDrive:   Hold [Minus] + [Up] + [Left] for 3s")
     log("-----------------------------------")
 
 def main():
