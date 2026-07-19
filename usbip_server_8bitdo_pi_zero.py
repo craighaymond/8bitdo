@@ -242,33 +242,30 @@ def bind_8bitdo(devices):
                         try:
                             with open(match_busid_path, 'w') as f:
                                 f.write(f"add {busid}")
-                        except Exception:
-                            pass
+                        except Exception as e:
+                            print(f"Failed to write match_busid: {e}")
                             
                     try:
                         with open(bind_path, 'w') as f:
                             f.write(busid)
                         print("Successfully bound.")
                     except Exception as e:
-                        if isinstance(e, FileNotFoundError):
-                            print(f"Failed to bind directly (sysfs): {e}")
-                            try:
-                                drivers = os.listdir("/sys/bus/usb/drivers/")
-                                print(f"   [Diagnostic] Available USB drivers: {', '.join(drivers)}")
-                                dmesg_out = subprocess.run(["dmesg"], capture_output=True, text=True).stdout
-                                dmesg_usbip = "\n".join([line for line in dmesg_out.splitlines() if "usbip" in line.lower()][-10:])
-                                print(f"   [Diagnostic] dmesg (last 10 usbip lines):\n{dmesg_usbip}")
-                            except Exception:
-                                pass
-                            
-                            print(f"   > Falling back to 'usbip bind -b {busid}'...")
-                            try:
-                                result = subprocess.run([USBIP_CMD, "bind", "-b", busid], capture_output=True, text=True, check=True)
-                                print("Successfully bound (fallback).")
-                            except subprocess.CalledProcessError as err:
-                                print(f"Fallback failed: {(err.stderr or err.stdout or 'Unknown error').strip()}")
-                        else:
-                            print(f"Failed to bind directly (sysfs): {e}")
+                        print(f"Failed to bind directly (sysfs): {e}")
+                        try:
+                            drivers = os.listdir("/sys/bus/usb/drivers/")
+                            print(f"   [Diagnostic] Available USB drivers: {', '.join(drivers)}")
+                            dmesg_out = subprocess.run(["dmesg"], capture_output=True, text=True).stdout
+                            dmesg_usbip = "\n".join([line for line in dmesg_out.splitlines() if "usbip" in line.lower()][-10:])
+                            print(f"   [Diagnostic] dmesg (last 10 usbip lines):\n{dmesg_usbip}")
+                        except Exception:
+                            pass
+                        
+                        print(f"   > Falling back to 'usbip bind -b {busid}'...")
+                        try:
+                            result = subprocess.run([USBIP_CMD, "bind", "-b", busid], capture_output=True, text=True, check=True)
+                            print("Successfully bound (fallback).")
+                        except subprocess.CalledProcessError as err:
+                            print(f"Fallback failed: {(err.stderr or err.stdout or 'Unknown error').strip()}")
                 except Exception as e:
                     print(f"Failed: {e}")
 
