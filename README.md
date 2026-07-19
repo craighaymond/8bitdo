@@ -222,6 +222,38 @@ All operations are logged to the console with timestamps in `[YYYY-MM-DD HH:MM]`
 - Do not run multiple instances simultaneously for the same server
 - The script requires administrative privileges for device attachment on some systems
 
+---
+
+# 8BitDo USBIP Server (Raspberry Pi)
+
+A Python-based USBIP server script (`usbip_server_8bitdo_pi_zero.py`) designed to run on a Raspberry Pi. It automatically monitors the USB bus, manages the `usbip-host` kernel module gracefully, and instantly binds any detected 8BitDo controllers so they can be shared over the network.
+
+## Changing Controller Modes
+
+Depending on your hardware, you can change the operating mode of your controllers or adapters so they are recognized differently by the client machine.
+
+### For 8BitDo USB Wireless Adapters (Orange/Grey block)
+If you are using the standalone USB dongle, make sure your controller is actively paired to it, then hold one of these button combinations for **3 seconds** to switch the adapter's mode:
+
+* **Nintendo Switch Mode:** Hold `[Select]` + `[L Bumper]`
+* **X-Input (Xbox):** Hold `[Select]` + `[Up]`
+* **D-Input (Android):** Hold `[Select]` + `[Left]`
+* **macOS:** Hold `[Select]` + `[Right]`
+* **PlayStation Classic:** Hold `[Select]` + `[Down]`
+* **Sega MegaDrive:** Hold `[Select]` + `[Up]` + `[Left]`
+
+*(Note: On PlayStation-style controllers, use the `Share`/`Create` button instead of `Select`)*
+
+### For 8BitDo Ultimate Controllers (with dedicated 2.4G receiver)
+If you are using the dedicated 2.4G receiver that comes inside the charging dock, these shortcuts **do not work**. You must physically toggle the **X / D** switch on the back of the controller to change between X-Input and D-Input modes.
+
+### Mode Walkthrough Script
+If you are struggling to get your USB adapter to change modes, you can run the included interactive script on your Raspberry Pi:
+```bash
+sudo python 8bitdo_mode_walkthrough.py
+```
+This script will detect your adapter and guide you step-by-step through testing all the mode combinations, showing you the exact USB IDs that are generated on the bus.
+
 ## License
 
 Use as needed for personal emulation purposes.
