@@ -41,18 +41,19 @@ def main():
         print("  (No 8BitDo or compatible gamepad devices detected)")
         
     modes = [
-        ("X-Input (Xbox/Windows)", "[Minus] + [Up]"),
-        ("D-Input (Android)", "[Minus] + [Left]"),
-        ("Switch Mode", "[Minus] + [L Bumper]"),
-        ("macOS Mode", "[Minus] + [Right]"),
-        ("PS Classic Mode", "[Minus] + [Down]"),
-        ("MegaDrive Mini", "[Minus] + [Up] + [Left]")
+        ("X-Input (Xbox/Windows)", "[Minus] + [Up]", "045e:028e (Microsoft Xbox 360 Controller)"),
+        ("D-Input (Android)", "[Minus] + [Left]", "2dc8:3107 or 2dc8:3105 (8BitDo D-Input)"),
+        ("Switch Mode", "[Minus] + [L Bumper]", "057e:2009 (Nintendo Switch Pro Controller)"),
+        ("macOS Mode", "[Minus] + [Right]", "054c:05c4 or 054c:0268 (Sony DualShock)"),
+        ("PS Classic Mode", "[Minus] + [Down]", "054c:0ce6 (Sony PS Classic Controller)"),
+        ("MegaDrive Mini", "[Minus] + [Up] + [Left]", "0f0d:00c1 or similar (Sega/Hori MegaDrive)")
     ]
     
-    for mode_name, combo in modes:
+    for mode_name, combo, expected_id in modes:
         print("\n" + "-"*50)
         print(f"Next Mode: {mode_name}")
         print(f"Action: Hold {combo} for 3 seconds.")
+        print(f"Expected USB ID: {expected_id}")
         print("Wait for the adapter LED to blink and the controller to reconnect.")
         input("Press Enter when you have changed the mode and it has reconnected...")
         
