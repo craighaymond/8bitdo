@@ -63,16 +63,10 @@ def main():
         while True:
             devs = get_usb_devices()
             target_devs = []
-            hardware_warning = ""
             
             for d in devs:
                 if any(vid in d['id'] for vid in known_vids) or "8BitDo" in d['name'].casefold():
                     target_devs.append(d)
-                    
-                    # Hardware type detection logic
-                    if d['id'] == "2dc8:3106" or d['id'] == "2dc8:3107":
-                        # If the name explicitly says Ultimate, or if it's the 3106/3107 pair
-                        hardware_warning = "\033[93m[Hardware Note] Detected 8BitDo Ultimate 2.4G Receiver. Use the PHYSICAL switch on back to change modes!\033[0m"
             
             # Print the status line and run inner loop for countdown
             for remaining in range(poll_interval, 0, -1):
@@ -86,11 +80,7 @@ def main():
                     status_str = " | ".join(parts)
                 
                 # \r returns to start of line, \033[K clears to end of line
-                output_line = f"\r\033[KCurrent State: {status_str}  (Polling in {remaining}s...)"
-                if hardware_warning:
-                    output_line += f"\n\033[K   {hardware_warning}\033[F" # Print warning below, then move cursor back up
-                    
-                sys.stdout.write(output_line)
+                sys.stdout.write(f"\r\033[KCurrent State: {status_str}  (Polling in {remaining}s...)")
                 sys.stdout.flush()
                 time.sleep(1)
                 
