@@ -283,7 +283,7 @@ def print_mode_shortcuts():
     log("  (Note: Hold until the controller vibrates)")
     log("-----------------------------------")
     log("8BitDo USB Wireless Adapter Shortcuts:")
-    log("  [S] Switch Mode:  Hold [Minus] + [L] for 3s")
+    log("  [S] Switch Mode:  Hold [Minus] + [L Bumper] for 3s")
     log("  [X] X-Input:      Hold [Minus] + [Up] for 3s")
     log("  [D] D-Input:      Hold [Minus] + [Left] for 3s")
     log("  [Mac] macOS:      Hold [Minus] + [Right] for 3s")
