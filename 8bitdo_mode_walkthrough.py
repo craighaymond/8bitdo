@@ -26,6 +26,12 @@ def main():
     print("This script guides you through changing the modes of your 8BitDo USB Adapter.")
     print("Ensure your controller is powered on and connected to the adapter.\n")
     
+    print("Button Legend:")
+    print("  [Minus]    = 'Select' / '-' button (left middle button)")
+    print("  [Share]    = 'Share' / 'Create' button (on PlayStation style controllers)")
+    print("  [L Bumper] = 'L1' / 'LB' / 'L' (Left Shoulder button)")
+    print("  [Up/Down/Left/Right] = D-Pad directional buttons\n")
+    
     devs = get_usb_devices()
     # Looking for 8BitDo, Nintendo, Sony, and Microsoft VIDs which the adapter masquerades as
     known_vids = ["2dc8", "057e", "054c", "045e", "0f0d"] 
