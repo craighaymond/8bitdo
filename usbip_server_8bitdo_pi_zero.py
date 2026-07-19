@@ -232,27 +232,25 @@ def bind_8bitdo(devices):
                     error_msg = (e.stderr or e.stdout or "Unknown error").strip()
                     print(f"Failed: {error_msg}")
             else:
-                # Linux manual sysfs bind (bypassing usbip binary to get exact error)
+                # Linux manual sysfs bind (bypassing usbip binary which is broken on modern kernels)
                 try:
                     busid = dev['busid']
                     match_busid_path = "/sys/bus/usb/drivers/usbip-host/match_busid"
                     bind_path = "/sys/bus/usb/drivers/usbip-host/bind"
                     
-                    if not os.path.exists(match_busid_path):
-                        print("Failed: usbip-host kernel module not loaded (match_busid not found).")
-                    else:
+                    if os.path.exists(match_busid_path):
                         try:
                             with open(match_busid_path, 'w') as f:
                                 f.write(f"add {busid}")
-                        except Exception as e:
-                            print(f"Failed to write match_busid: {e} ", end="")
+                        except Exception:
+                            pass
                             
-                        try:
-                            with open(bind_path, 'w') as f:
-                                f.write(busid)
-                            print("Successfully bound (sysfs).")
-                        except Exception as e:
-                            print(f"Failed to bind (sysfs): {e}")
+                    try:
+                        with open(bind_path, 'w') as f:
+                            f.write(busid)
+                        print("Successfully bound.")
+                    except Exception as e:
+                        print(f"Failed to bind directly (sysfs): {e}")
                 except Exception as e:
                     print(f"Failed: {e}")
 
@@ -293,12 +291,6 @@ def main():
         run_command(["modprobe", "usbip-host"], exit_on_fail=False, silent_fail=True)
         run_command(["modprobe", "usbip-core"], exit_on_fail=False, silent_fail=True)
         
-        if not os.path.exists("/sys/bus/usb/drivers/usbip-host"):
-            log("CRITICAL ERROR: 'usbip-host' kernel module is not loaded or missing!")
-            log("You may need to install the extra kernel modules package for your system.")
-            log("Example (Ubuntu/Debian on Pi): sudo apt install linux-modules-extra-raspi")
-            log("Example (Raspberry Pi OS): sudo apt install usbip")
-            
         # Restart the daemon - Try common paths
         log("Killing any existing usbipd processes and clearing port 3240...")
         run_command(["pkill", "-9", "usbipd"], exit_on_fail=False, silent_fail=True)
