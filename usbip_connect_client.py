@@ -324,13 +324,17 @@ def main():
             final_attached = list_local_attachments()
             status_parts = []
             server_has_attachments = False
+            kb_busid = None
             for (ip, busid), desc in final_attached.items():
                 if ip == server_ip:
                     server_has_attachments = True
                     mode, _ = detect_mode(desc)
-                    # Shorten mode name (e.g., "X-Mode (Native BT)" -> "X-Mode")
-                    short_mode = mode.split()[0]
-                    status_parts.append(f"{busid} ({short_mode})")
+                    if mode == "USB Keyboard":
+                        kb_busid = busid
+                    else:
+                        # Shorten mode name (e.g., "X-Mode (Native BT)" -> "X-Mode")
+                        short_mode = mode.split()[0]
+                        status_parts.append(f"{busid} ({short_mode})")
                     
                     match_id = re.search(r"\(([0-9a-fA-F]{4}:[0-9a-fA-F]{4})\)", desc)
                     if match_id:
@@ -344,10 +348,11 @@ def main():
             status_str = " | ".join(status_parts) if status_parts else "None"
             server_label = server_ip if server_ip else "None"
             device_str = ", ".join(unique_hwids) if unique_hwids else "None"
+            kb_str = f"YES ({kb_busid})" if kb_busid else "NO"
             
             for remaining in range(10, 0, -1):
                 # Omit the timestamp here to save space and prevent terminal wrapping!
-                msg = f"Controller IDs: [{device_str}] | Server: {server_label} | Connected: {status_str} | Next in {remaining}s"
+                msg = f"Controller IDs: [{device_str}] | Server: {server_label} | Keyboard: {kb_str} | Connected: {status_str} | Next in {remaining}s"
                 sys.stdout.write(f"\r\033[K{msg}")
                 sys.stdout.flush()
                 time.sleep(1)
