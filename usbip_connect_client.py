@@ -7,6 +7,10 @@ import os
 import sys
 import ctypes
 
+# Enable ANSI escape codes on Windows for \033 to work
+if os.name == 'nt':
+    os.system("")
+
 PORT = 3240
 
 def get_timestamp():
@@ -14,11 +18,28 @@ def get_timestamp():
     now = datetime.datetime.now()
     return f"[{now.strftime('%Y-%m-%d %H:%M')}]"
 
-def print_log(message):
-    """Prints a message with a timestamp and flushes stdout."""
-    print("\r" + " " * 100 + "\r", end='', flush=False)
-    print(f"{get_timestamp()} {message}")
+last_action_id = None
+
+def print_log(message, action_id=None):
+    """Prints a message with a timestamp. Overwrites the previous line if the action_id matches."""
+    global last_action_id
+    
+    # If no explicit action_id is provided, use the message itself without numbers as the template
+    if not action_id:
+        action_id = re.sub(r'\d+', '', message)
+        
+    # Clear any active countdown/status line first
+    sys.stdout.write("\r\033[K")
+        
+    if action_id == last_action_id and last_action_id is not None:
+        # Move cursor up one line (\033[1A), clear the line (\033[K), and overwrite
+        sys.stdout.write(f"\033[1A\033[K{get_timestamp()} {message}\n")
+    else:
+        # Print normally on a new line
+        sys.stdout.write(f"{get_timestamp()} {message}\n")
+        
     sys.stdout.flush()
+    last_action_id = action_id
 
 def ensure_joy_cpl_running():
     """Checks if the Game Controllers (joy.cpl) window is open, and launches it if not."""
@@ -65,7 +86,7 @@ def find_usbip_server(last_ip=None):
     for host in ["raspberrypi.local", "raspberrypi", "pi-zero.local", "8bitdo-server.local"]:
         try:
             ip = socket.gethostbyname(host)
-            print_log(f"Resolved {host} to {ip}. Checking port {PORT}...")
+            print_log(f"Resolved {host} to {ip}. Checking port {PORT}...", action_id="scan")
             with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
                 s.settimeout(1.0)
                 if s.connect_ex((ip, PORT)) == 0:
@@ -76,7 +97,7 @@ def find_usbip_server(last_ip=None):
     # 2. Scan subnets
     potential_subnets = get_local_subnets()
     for subnet in potential_subnets:
-        print_log(f"Scanning subnet {subnet}0/24...")
+        print_log(f"Scanning subnet {subnet}0/24...", action_id="scan")
         for i in range(1, 255):
             ip = f"{subnet}{i}"
             if ip == last_ip: continue
@@ -245,13 +266,13 @@ def main():
             ensure_joy_cpl_running()
             
             if not server_ip:
-                print_log("Searching for usbipd server on LAN...")
+                print_log("Searching for usbipd server on LAN...", action_id="scan")
                 server_ip = find_usbip_server(last_found_ip)
                 if server_ip:
                     print_log(f"Found usbipd server at {server_ip}")
                     last_found_ip = server_ip
                 else:
-                    print_log("Could not find usbipd server. Retrying in 10s.")
+                    print_log("Could not find usbipd server. Retrying in 10s.", action_id="scan")
                     time.sleep(10)
                     continue
             
@@ -264,7 +285,7 @@ def main():
             
             if devices is None: # Command failed (timeout or error)
                 if not has_local_attachments:
-                    print_log(f"Server {server_ip} unresponsive. Re-scanning...")
+                    print_log(f"Server {server_ip} unresponsive. Re-scanning...", action_id="scan")
                     server_ip = None
                 else:
                     print_log(f"Server {server_ip} unresponsive, but devices are still attached. Keeping connection.")
@@ -272,7 +293,7 @@ def main():
                 # ONLY re-scan if we don't have ANY local attachments from this server
                 if not has_local_attachments:
                     if not manual_ip:
-                        print_log(f"No exportable devices on {server_ip}. Re-scanning...")
+                        print_log(f"No exportable devices on {server_ip}. Re-scanning...", action_id="scan")
                         server_ip = None
                     else:
                         print_log(f"Waiting for devices on {server_ip}...")
@@ -297,14 +318,12 @@ def main():
             
             status_str = " | ".join(status_parts) if status_parts else "None"
             server_label = server_ip if server_ip else "None"
-            msg = f"{get_timestamp()} Status: Server {server_label} | Connected: {status_str}"
-            print("\r" + msg.ljust(100), end='', flush=True)
             
-            # If we lost the server but still have attachments, don't clear server_ip immediately
-            # if server_ip and not devices and not server_has_attachments:
-            #     # Logic inside step 2 already handles this via has_local_attachments
-            
-            time.sleep(10) # Reduced poll interval for better responsiveness
+            for remaining in range(10, 0, -1):
+                msg = f"Status: Server {server_label} | Connected: {status_str} | Next check in {remaining}s..."
+                sys.stdout.write(f"\r\033[K{get_timestamp()} {msg}")
+                sys.stdout.flush()
+                time.sleep(1)
     except KeyboardInterrupt:
         print_log("Exiting USBIP Connect Client...")
         sys.exit(0)
