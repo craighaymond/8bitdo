@@ -60,10 +60,11 @@ def apply_cmdline_quirk():
             new_content = content + " usbhid.quirks=0x057e:0x2009:0x0004\n"
             with open(cmdline_path, 'w') as f:
                 f.write(new_content)
-            print(f"Successfully appended quirk to {cmdline_path}.")
-            print("PLEASE REBOOT your Raspberry Pi for this to take effect.")
+            print("Successfully appended quirk to {cmdline_path}.")
+            print("PLEASE REBOOT your Raspberry Pi for this to take effect. (Command: sudo reboot)")
     except PermissionError:
         print("\nERROR: Permission denied. You must run this script with 'sudo'.")
+        print("Example: sudo python3 8bitdo_smode_troubleshooter.py")
     except Exception as e:
         print(f"\nError: {e}")
     input("\nPress Enter to return to menu...")
@@ -83,9 +84,10 @@ def apply_blacklist():
         with open("/etc/modprobe.d/blacklist-nintendo.conf", 'w') as f:
             f.write("blacklist hid_nintendo\nblacklist nintendo\n")
         print("Successfully created blacklist file.")
-        print("PLEASE REBOOT your Raspberry Pi for this to take effect.")
+        print("PLEASE REBOOT your Raspberry Pi for this to take effect. (Command: sudo reboot)")
     except PermissionError:
         print("\nERROR: Permission denied. You must run this script with 'sudo'.")
+        print("Example: sudo python3 8bitdo_smode_troubleshooter.py")
     except Exception as e:
         print(f"\nError: {e}")
     input("\nPress Enter to return to menu...")
@@ -114,9 +116,10 @@ def remove_cmdline_quirk():
             with open(cmdline_path, 'w') as f:
                 f.write(new_content.strip() + "\n")
             print(f"Successfully removed quirk from {cmdline_path}.")
-            print("PLEASE REBOOT your Raspberry Pi for this to take effect.")
+            print("PLEASE REBOOT your Raspberry Pi for this to take effect. (Command: sudo reboot)")
     except PermissionError:
         print("\nERROR: Permission denied. You must run this script with 'sudo'.")
+        print("Example: sudo python3 8bitdo_smode_troubleshooter.py")
     except Exception as e:
         print(f"\nError: {e}")
     input("\nPress Enter to return to menu...")
@@ -133,11 +136,12 @@ def remove_blacklist():
         if os.path.exists("/etc/modprobe.d/blacklist-nintendo.conf"):
             os.remove("/etc/modprobe.d/blacklist-nintendo.conf")
             print("Successfully deleted blacklist file.")
-            print("PLEASE REBOOT your Raspberry Pi for this to take effect.")
+            print("PLEASE REBOOT your Raspberry Pi for this to take effect. (Command: sudo reboot)")
         else:
             print("Blacklist file does not exist. Nothing to undo.")
     except PermissionError:
         print("\nERROR: Permission denied. You must run this script with 'sudo'.")
+        print("Example: sudo python3 8bitdo_smode_troubleshooter.py")
     except Exception as e:
         print(f"\nError: {e}")
     input("\nPress Enter to return to menu...")
