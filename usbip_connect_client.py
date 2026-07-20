@@ -32,22 +32,22 @@ HWID_MAP = {
 
 def print_supported_devices():
     """Prints a concise 2-column ASCII table of supported controllers."""
-    print("\n" + "-" * 57)
-    print(f"| {'Target ID':<10} | {'Controller Mode':<15} | {'Target ID':<10} | {'Controller Mode':<11} |")
-    print("-" * 57)
+    print("\n" + "=" * 66)
+    print(f"| {'Target ID':<9} | {'Controller Mode':<17} || {'Target ID':<9} | {'Controller Mode':<17} |")
+    print("=" * 66)
     
     items = list(HWID_MAP.items())
     half = (len(items) + 1) // 2
     for i in range(half):
         id1, mode1 = items[i]
-        col1 = f"| {id1:<10} | {mode1:<15} "
+        col1 = f"| {id1:<9} | {mode1:<17} ||"
         if i + half < len(items):
             id2, mode2 = items[i + half]
-            col2 = f"| {id2:<10} | {mode2:<11} |"
+            col2 = f" {id2:<9} | {mode2:<17} |"
         else:
-            col2 = f"| {'':<10} | {'':<11} |"
+            col2 = f" {'':<9} | {'':<17} |"
         print(col1 + col2)
-    print("-" * 57 + "\n")
+    print("=" * 66 + "\n")
 
 last_action_id = None
 
