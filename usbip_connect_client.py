@@ -165,32 +165,35 @@ def detect_mode(description):
 
     return mode, is_likely_controller
 
+last_seen_hwids = None
+
 def list_devices(server_ip):
-    """Lists available devices on the usbip server and returns (busid, description, mode, is_controller) tuples."""
+    """Lists available devices on the usbip server and returns (devices, all_hwids)."""
     try:
         # Increased timeout for usbip list -r
         result = subprocess.run(["usbip", "list", "-r", server_ip], capture_output=True, text=True, timeout=10)
         if result.returncode != 0:
             if result.stderr:
                 print_log(f"USBIP Error: {result.stderr.strip()}")
-            return None # Signal failure vs empty list
+            return None, [] # Signal failure vs empty list
             
         lines = result.stdout.splitlines()
         devices = []
+        all_hwids = []
+        
         for line in lines:
-            # Match busid and description. 
-            # Format usually: "      1-1.2: unknown vendor : unknown product (046d:c52b)"
-            # Or: " - 192.168.0.46" (skip this)
-            
             # Pattern 1: Indented busid: description (HWID)
             match = re.search(r"^\s+([0-9a-fA-F.-]+)\s*:\s*(.*)", line)
             if match:
                 busid = match.group(1).strip()
                 description = match.group(2).strip()
                 
-                # Skip the busid if it matches the server IP line (e.g. " - 192.168.0.1")
                 if busid == server_ip or description.startswith("/sys/"):
                     continue
+                    
+                match_id = re.search(r"\(([0-9a-fA-F]{4}:[0-9a-fA-F]{4})\)", description)
+                if match_id:
+                    all_hwids.append(match_id.group(1).lower())
                 
                 mode, is_controller = detect_mode(description)
                 devices.append((busid, description, mode, is_controller))
@@ -200,13 +203,18 @@ def list_devices(server_ip):
                 if match:
                     busid = match.group(1).strip()
                     description = match.group(2).strip()
+                    
+                    match_id = re.search(r"\(([0-9a-fA-F]{4}:[0-9a-fA-F]{4})\)", description)
+                    if match_id:
+                        all_hwids.append(match_id.group(1).lower())
+                        
                     mode, is_controller = detect_mode(description)
                     devices.append((busid, description, mode, is_controller))
 
-        return devices
+        return devices, all_hwids
     except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
         print_log(f"Error listing devices on {server_ip}: {e}")
-        return None
+        return None, []
 
 def attach_device(server_ip, busid, description, mode):
     """Attaches a device via usbip."""
@@ -299,7 +307,12 @@ def main():
             has_local_attachments = any(ip == server_ip for (ip, _) in attached_map.keys())
             
             # 2. Get available devices on the server
-            devices = list_devices(server_ip)
+            global last_seen_hwids
+            devices, all_hwids = list_devices(server_ip)
+            
+            if all_hwids != last_seen_hwids and all_hwids:
+                print_log(f"All USB IDs available on server: {', '.join(all_hwids)}")
+                last_seen_hwids = all_hwids
             
             if devices is None: # Command failed (timeout or error)
                 if not has_local_attachments:
