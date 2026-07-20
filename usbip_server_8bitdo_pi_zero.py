@@ -343,8 +343,9 @@ def check_kernel_crashes():
                 
             # Detect errors indicating the kernel rejected/crashed it
             if crashed_id and ("probe with driver nintendo failed" in line or "Failed handshake" in line or "error -32" in line or "error -71" in line):
+                mode_name = HWID_MAP.get(crashed_id, "Unknown Mode")
                 print("\n")
-                log(f"\033[91m[CRITICAL KERNEL WARNING] The Linux kernel saw a valid controller (ID: {crashed_id}) but its internal driver crashed and rejected it!\033[0m")
+                log(f"\033[91m[CRITICAL KERNEL WARNING] The Linux kernel saw a valid controller (ID: {crashed_id} - {mode_name}) but its internal driver crashed and rejected it!\033[0m")
                 log("\033[93mThe controller is being violently disconnected by the operating system.\033[0m")
                 log("\033[92mSUGGESTION: Please put the controller into X-Mode (Hold [Minus] + [Up] for 3s) to bypass the crashing driver!\033[0m\n")
                 last_dmesg_timestamp = ts

@@ -103,8 +103,9 @@ def main():
                                 crashed_id = f"{match_usb.group(1).lower()}:{match_usb.group(2).lower()}"
                                 
                             if crashed_id and ("probe with driver nintendo failed" in line or "Failed handshake" in line or "error -32" in line or "error -71" in line):
+                                mode_name = mode_map.get(crashed_id, "Unknown Mode")
                                 sys.stdout.write("\r\033[K") # Clear current line
-                                print(f"\n\033[91m[CRITICAL KERNEL WARNING] The Linux kernel saw a valid controller (ID: {crashed_id}) but its internal driver crashed and rejected it!\033[0m")
+                                print(f"\n\033[91m[CRITICAL KERNEL WARNING] The Linux kernel saw a valid controller (ID: {crashed_id} - {mode_name}) but its internal driver crashed and rejected it!\033[0m")
                                 print("\033[93mThe controller is being violently disconnected by the operating system.\033[0m")
                                 print("\033[92mSUGGESTION: Please put the controller into X-Mode (Hold [Minus] + [Up] for 3s) to bypass the crashing driver!\033[0m\n")
                                 last_dmesg_timestamp = ts
