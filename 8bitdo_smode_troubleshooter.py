@@ -5,18 +5,34 @@ import os
 import sys
 import re
 
+HWID_MAP = {
+    "2dc8:3105": ("D-Mode (Adapter)",   "Hold [-] + [Left]"),
+    "2dc8:3107": ("D-Mode (Native BT)", "Native [-] + [B]"),
+    "2dc8:3106": ("X-Mode (Native BT)", "Native [-] + [X]"),
+    "057e:2009": ("S-Mode (Switch)",    "Hold [-] + [L Bumper]"),
+    "045e:028e": ("X-Mode (Adapter)",   "Hold [-] + [Up]"),
+    "045e:02d1": ("X-Mode (XOne)",      "Native USB"),
+    "054c:05c4": ("D-Mode (PS4)",       "Hold [-] + [Right]"),
+    "054c:0ce6": ("D-Mode (PS5)",       "Hold [-] + [Down]")
+}
+
 def clear_screen():
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def print_header():
     clear_screen()
-    print("=========================================================")
-    print("      8BitDo S-Mode (Switch) Troubleshooter for Pi       ")
-    print("=========================================================")
+    print("=================================================================")
+    print("         8BitDo S-Mode (Switch) Troubleshooter for Pi            ")
+    print("=================================================================")
     print(" The Linux 'hid-nintendo' driver often crashes (error -32)")
     print(" when an 8BitDo adapter presents itself as a Switch Pro ")
     print(" controller (057e:2009). This tool helps diagnose and fix it.")
-    print("=========================================================\n")
+    print("=================================================================")
+    print(f"| {'Target ID':<9} | {'Controller Mode':<18} | {'Button Combo (Hold 3s)':<22} |")
+    print("=================================================================")
+    for hwid, (mode, combo) in HWID_MAP.items():
+        print(f"| {hwid:<9} | {mode:<18} | {combo:<22} |")
+    print("=================================================================\n")
 
 def check_dmesg_crashes():
     print("--- Recent Kernel Crashes (dmesg) ---")
