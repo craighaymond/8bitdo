@@ -60,6 +60,7 @@ def main():
     poll_interval = 3
     
     try:
+        last_dmesg_timestamp = 0.0
         while True:
             devs = get_usb_devices()
             target_devs = []
@@ -78,6 +79,40 @@ def main():
                         mode = mode_map.get(d['id'], "Unknown Mode")
                         parts.append(f"[{d['id']} -> {mode}]")
                     status_str = " | ".join(parts)
+                
+                # Check for kernel crashes in the background
+                if os.name != 'nt':
+                    try:
+                        out = subprocess.run(["dmesg"], capture_output=True, text=True).stdout
+                        lines = out.splitlines()[-30:]
+                        crashed_id = None
+                        recent_timestamp = last_dmesg_timestamp
+                        
+                        for line in lines:
+                            match_ts = re.search(r"^\[\s*([\d\.]+)\]", line)
+                            if not match_ts: continue
+                            
+                            ts = float(match_ts.group(1))
+                            if ts <= last_dmesg_timestamp:
+                                continue
+                                
+                            recent_timestamp = max(recent_timestamp, ts)
+                            
+                            match_usb = re.search(r"idVendor=([a-fA-F0-9]{4}), idProduct=([a-fA-F0-9]{4})", line)
+                            if match_usb:
+                                crashed_id = f"{match_usb.group(1).lower()}:{match_usb.group(2).lower()}"
+                                
+                            if crashed_id and ("probe with driver nintendo failed" in line or "Failed handshake" in line or "error -32" in line or "error -71" in line):
+                                sys.stdout.write("\r\033[K") # Clear current line
+                                print(f"\n\033[91m[CRITICAL KERNEL WARNING] The Linux kernel saw a valid controller (ID: {crashed_id}) but its internal driver crashed and rejected it!\033[0m")
+                                print("\033[93mThe controller is being violently disconnected by the operating system.\033[0m")
+                                print("\033[92mSUGGESTION: Please put the controller into X-Mode (Hold [Minus] + [Up] for 3s) to bypass the crashing driver!\033[0m\n")
+                                last_dmesg_timestamp = ts
+                                crashed_id = None
+                                
+                        last_dmesg_timestamp = recent_timestamp
+                    except Exception:
+                        pass
                 
                 # \r returns to start of line, \033[K clears to end of line
                 sys.stdout.write(f"\r\033[KCurrent State: {status_str}  (Polling in {remaining}s...)")

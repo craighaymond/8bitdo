@@ -310,6 +310,50 @@ def print_mode_shortcuts():
     log("  [MD] MegaDrive:   Hold [Minus] + [Up] + [Left] for 3s")
     log("-----------------------------------")
 
+last_dmesg_timestamp = 0.0
+
+def check_kernel_crashes():
+    global last_dmesg_timestamp
+    if IS_WINDOWS:
+        return
+        
+    try:
+        out = subprocess.run(["dmesg"], capture_output=True, text=True).stdout
+        lines = out.splitlines()[-50:] # Check last 50 lines
+        
+        crashed_id = None
+        recent_timestamp = last_dmesg_timestamp
+        
+        for line in lines:
+            # Parse timestamp: [ 1331.167083] 
+            match_ts = re.search(r"^\[\s*([\d\.]+)\]", line)
+            if not match_ts: continue
+            
+            ts = float(match_ts.group(1))
+            if ts <= last_dmesg_timestamp:
+                continue
+                
+            recent_timestamp = max(recent_timestamp, ts)
+            
+            # Detect USB device
+            match_usb = re.search(r"idVendor=([a-fA-F0-9]{4}), idProduct=([a-fA-F0-9]{4})", line)
+            if match_usb:
+                vid, pid = match_usb.group(1).lower(), match_usb.group(2).lower()
+                crashed_id = f"{vid}:{pid}"
+                
+            # Detect errors indicating the kernel rejected/crashed it
+            if crashed_id and ("probe with driver nintendo failed" in line or "Failed handshake" in line or "error -32" in line or "error -71" in line):
+                print("\n")
+                log(f"\033[91m[CRITICAL KERNEL WARNING] The Linux kernel saw a valid controller (ID: {crashed_id}) but its internal driver crashed and rejected it!\033[0m")
+                log("\033[93mThe controller is being violently disconnected by the operating system.\033[0m")
+                log("\033[92mSUGGESTION: Please put the controller into X-Mode (Hold [Minus] + [Up] for 3s) to bypass the crashing driver!\033[0m\n")
+                last_dmesg_timestamp = ts
+                crashed_id = None # Reset so we don't spam multiple times for the same block
+                
+        last_dmesg_timestamp = recent_timestamp
+    except Exception:
+        pass
+
 def main():
     if sys.platform not in ["win32", "linux"]:
         log(f"Unsupported platform: {sys.platform}")
@@ -426,6 +470,8 @@ def main():
             
             msg = f"{get_timestamp()} Polling: {waiting_count} Waiting, {in_use_count} In-Use ({mode_summary})"
             print("\r" + msg.ljust(120), end='', flush=True)
+            
+            check_kernel_crashes()
             time.sleep(POLL_INTERVAL)
     except KeyboardInterrupt:
         print(f"\n\n{get_timestamp()} Exiting... Devices remain bound in usbipd.")
