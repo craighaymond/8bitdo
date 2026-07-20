@@ -325,24 +325,27 @@ def main():
                 if ip == server_ip:
                     server_has_attachments = True
                     mode, _ = detect_mode(desc)
-                    status_parts.append(f"{busid}: {mode}")
+                    # Shorten mode name (e.g., "X-Mode (Native BT)" -> "X-Mode")
+                    short_mode = mode.split()[0]
+                    status_parts.append(f"{busid} ({short_mode})")
                     
-                    # The server hides devices from 'usbip list -r' once they are attached.
-                    # We extract the HWID from the local attachment description and add it back
-                    # to all_hwids so the UI correctly shows the device still exists on the server!
                     match_id = re.search(r"\(([0-9a-fA-F]{4}:[0-9a-fA-F]{4})\)", desc)
                     if match_id:
                         hwid = match_id.group(1).lower()
                         if hwid not in all_hwids:
                             all_hwids.append(hwid)
             
+            # Deduplicate IDs for a cleaner display
+            unique_hwids = sorted(list(set(all_hwids))) if 'all_hwids' in locals() and all_hwids else []
+            
             status_str = " | ".join(status_parts) if status_parts else "None"
             server_label = server_ip if server_ip else "None"
-            device_str = ", ".join(all_hwids) if 'all_hwids' in locals() and all_hwids else "None"
+            device_str = ", ".join(unique_hwids) if unique_hwids else "None"
             
             for remaining in range(10, 0, -1):
+                # Omit the timestamp here to save space and prevent terminal wrapping!
                 msg = f"Server IDs: [{device_str}] | Target: {server_label} | Connected: {status_str} | Next in {remaining}s"
-                sys.stdout.write(f"\r\033[K{get_timestamp()} {msg}")
+                sys.stdout.write(f"\r\033[K{msg}")
                 sys.stdout.flush()
                 time.sleep(1)
     except KeyboardInterrupt:
