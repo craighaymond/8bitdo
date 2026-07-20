@@ -344,7 +344,7 @@ def main():
             
             for remaining in range(10, 0, -1):
                 # Omit the timestamp here to save space and prevent terminal wrapping!
-                msg = f"Server IDs: [{device_str}] | Server: {server_label} | Connected: {status_str} | Next in {remaining}s"
+                msg = f"Controller IDs: [{device_str}] | Server: {server_label} | Connected: {status_str} | Next in {remaining}s"
                 sys.stdout.write(f"\r\033[K{msg}")
                 sys.stdout.flush()
                 time.sleep(1)
