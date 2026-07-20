@@ -307,12 +307,7 @@ def main():
             has_local_attachments = any(ip == server_ip for (ip, _) in attached_map.keys())
             
             # 2. Get available devices on the server
-            global last_seen_hwids
             devices, all_hwids = list_devices(server_ip)
-            
-            if all_hwids != last_seen_hwids and all_hwids:
-                print_log(f"All USB IDs available on server: {', '.join(all_hwids)}")
-                last_seen_hwids = all_hwids
             
             if devices is None: # Command failed (timeout or error)
                 if not has_local_attachments:
@@ -349,9 +344,10 @@ def main():
             
             status_str = " | ".join(status_parts) if status_parts else "None"
             server_label = server_ip if server_ip else "None"
+            device_str = ", ".join(all_hwids) if 'all_hwids' in locals() and all_hwids else "None"
             
             for remaining in range(10, 0, -1):
-                msg = f"Status: Server {server_label} | Connected: {status_str} | Next check in {remaining}s..."
+                msg = f"Server IDs: [{device_str}] | Target: {server_label} | Connected: {status_str} | Next in {remaining}s"
                 sys.stdout.write(f"\r\033[K{get_timestamp()} {msg}")
                 sys.stdout.flush()
                 time.sleep(1)
