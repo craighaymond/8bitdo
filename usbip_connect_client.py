@@ -308,16 +308,9 @@ def main():
                 else:
                     print_log(f"Server {server_ip} unresponsive, but devices are still attached. Keeping connection.")
             elif not devices: # Command succeeded but list is empty
-                # ONLY re-scan if we don't have ANY local attachments from this server
-                if not has_local_attachments:
-                    if not manual_ip:
-                        print_log(f"No exportable devices on {server_ip}. Re-scanning...", action_id="scan")
-                        server_ip = None
-                    else:
-                        print_log(f"Waiting for devices on {server_ip}...")
-                else:
-                    # We have devices attached, but server reports none available (expected)
-                    pass
+                # We have no exportable devices, but the server is still responding.
+                # Do not drop the IP, just silently wait for devices to be exported.
+                pass
             else:
                 # We have devices!
                 for busid, description, mode, is_controller in devices:
