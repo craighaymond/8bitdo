@@ -36,7 +36,9 @@ def print_header():
     
     devices = get_connected_controllers()
     if devices:
-        print(f" Detected Controllers: {', '.join(devices)}")
+        print(" Detected Controllers:")
+        for d in devices:
+            print(f"   - {d}")
     else:
         print(" Detected Controllers: None")
     print("=================================================================\n")
