@@ -178,7 +178,8 @@ def get_workaround_status():
         if not os.path.exists(cmdline_path): cmdline_path = "/boot/firmware/cmdline.txt"
         if os.path.exists(cmdline_path):
             with open(cmdline_path, 'r') as f:
-                if "usbhid.quirks=0x057e:2009:0x0004" in f.read() or "usbhid.quirks=0x057e:0x2009:0x0004" in f.read():
+                content = f.read()
+                if "usbhid.quirks=0x057e:2009:0x0004" in content or "usbhid.quirks=0x057e:0x2009:0x0004" in content:
                     status["quirk"] = True
     except: pass
     
