@@ -18,6 +18,37 @@ def get_timestamp():
     now = datetime.datetime.now()
     return f"[{now.strftime('%Y-%m-%d %H:%M')}]"
 
+# Known 8BitDo Hardware IDs
+HWID_MAP = {
+    "2dc8:3105": "Receiver (Search)",
+    "2dc8:3107": "D-Mode (8BitDo)",
+    "2dc8:3106": "X-Mode (8BitDo)",
+    "057e:2009": "S-Mode (Switch)",
+    "045e:028e": "X-Mode (X360)",
+    "045e:02d1": "X-Mode (XOne)",
+    "054c:05c4": "D-Mode (PS4)",
+    "054c:0ce6": "D-Mode (PS5)"
+}
+
+def print_supported_devices():
+    """Prints a concise 2-column ASCII table of supported controllers."""
+    print("\n" + "-" * 57)
+    print(f"| {'Target ID':<10} | {'Controller Mode':<15} | {'Target ID':<10} | {'Controller Mode':<11} |")
+    print("-" * 57)
+    
+    items = list(HWID_MAP.items())
+    half = (len(items) + 1) // 2
+    for i in range(half):
+        id1, mode1 = items[i]
+        col1 = f"| {id1:<10} | {mode1:<15} "
+        if i + half < len(items):
+            id2, mode2 = items[i + half]
+            col2 = f"| {id2:<10} | {mode2:<11} |"
+        else:
+            col2 = f"| {'':<10} | {'':<11} |"
+        print(col1 + col2)
+    print("-" * 57 + "\n")
+
 last_action_id = None
 
 def print_log(message, action_id=None):
@@ -109,22 +140,10 @@ def find_usbip_server(last_ip=None):
 
 def detect_mode(description):
     """Detects the controller mode and returns (mode, is_likely_controller)."""
-    # Known 8BitDo Hardware IDs
-    hwid_map = {
-        "2dc8:3105": "Receiver (Searching)",
-        "2dc8:3107": "D-Mode (8BitDo)",
-        "2dc8:3106": "X-Mode (8BitDo)",
-        "057e:2009": "S-Mode (Switch)",
-        "045e:028e": "X-Mode (Xbox 360)",
-        "045e:02d1": "X-Mode (Xbox One)",
-        "054c:05c4": "D-Mode (PS4)",
-        "054c:0ce6": "D-Mode (PS5)"
-    }
-    
     desc_lower = description.lower()
     
     # 1. Check exact HWIDs first
-    for hwid, mode_name in hwid_map.items():
+    for hwid, mode_name in HWID_MAP.items():
         if hwid in desc_lower:
             return mode_name, True
             
@@ -255,6 +274,8 @@ def main():
     last_found_ip = manual_ip
     
     print_log("USBIP Connect Client started. Press Ctrl+C to stop.")
+    print_supported_devices()
+    
     if manual_ip:
         print_log(f"Targeting specific server: {manual_ip}")
     
