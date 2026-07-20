@@ -20,9 +20,9 @@ def get_timestamp():
 
 # Known 8BitDo Hardware IDs
 HWID_MAP = {
-    "2dc8:3105": ("D-Mode (Idle/Search)", "Hold [-] + [Left]"),
-    "2dc8:3107": ("D-Mode (Active)",    "Auto (When Paired)"),
-    "2dc8:3106": ("X-Mode (Native)",    "Hold [-] + [X]"),
+    "2dc8:3105": ("D-Mode (Adapter)",   "Hold [-] + [Left]"),
+    "2dc8:3107": ("D-Mode (Native BT)", "Native [-] + [B]"),
+    "2dc8:3106": ("X-Mode (Native BT)", "Native [-] + [X]"),
     "057e:2009": ("S-Mode (Switch)",    "Hold [-] + [L Bumper]"),
     "045e:028e": ("X-Mode (Adapter)",   "Hold [-] + [Up]"),
     "045e:02d1": ("X-Mode (XOne)",      "Native USB"),
