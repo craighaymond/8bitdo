@@ -345,14 +345,14 @@ def main():
             # Deduplicate IDs for a cleaner display
             unique_hwids = sorted(list(set(all_hwids))) if 'all_hwids' in locals() and all_hwids else []
             
-            status_str = " | ".join(status_parts) if status_parts else "None"
+            status_str = ", ".join(status_parts) if status_parts else "None"
             server_label = server_ip if server_ip else "None"
-            device_str = ", ".join(unique_hwids) if unique_hwids else "None"
-            kb_str = f"YES ({kb_busid})" if kb_busid else "NO"
+            device_str = ",".join(unique_hwids) if unique_hwids else "None"
+            kb_str = f"YES({kb_busid})" if kb_busid else "NO"
             
             for remaining in range(10, 0, -1):
                 # Omit the timestamp here to save space and prevent terminal wrapping!
-                msg = f"Controller IDs: [{device_str}] | Server: {server_label} | Keyboard: {kb_str} | Connected: {status_str} | Next in {remaining}s"
+                msg = f"IDs:[{device_str}] | Srv:{server_label} | KB:{kb_str} | Con:{status_str} | {remaining}s"
                 sys.stdout.write(f"\r\033[K{msg}")
                 sys.stdout.flush()
                 time.sleep(1)
