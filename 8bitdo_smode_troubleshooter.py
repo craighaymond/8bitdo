@@ -146,6 +146,38 @@ def remove_blacklist():
         print(f"\nError: {e}")
     input("\nPress Enter to return to menu...")
 
+def get_workaround_status():
+    status = {"quirk": False, "blacklist": False}
+    try:
+        cmdline_path = "/boot/cmdline.txt"
+        if not os.path.exists(cmdline_path): cmdline_path = "/boot/firmware/cmdline.txt"
+        if os.path.exists(cmdline_path):
+            with open(cmdline_path, 'r') as f:
+                if "usbhid.quirks=0x057e:2009:0x0004" in f.read() or "usbhid.quirks=0x057e:0x2009:0x0004" in f.read():
+                    status["quirk"] = True
+    except: pass
+    
+    try:
+        if os.path.exists("/etc/modprobe.d/blacklist-nintendo.conf"):
+            status["blacklist"] = True
+    except: pass
+    
+    return status
+
+def get_driver_for_device(hwid):
+    try:
+        out = subprocess.run(["usb-devices"], capture_output=True, text=True).stdout
+        current_vendor = ""
+        for line in out.splitlines():
+            if "Vendor=" in line and "ProdID=" in line:
+                match = re.search(r"Vendor=([a-fA-F0-9]{4})\s+ProdID=([a-fA-F0-9]{4})", line)
+                if match: current_vendor = f"{match.group(1).lower()}:{match.group(2).lower()}"
+            if "Driver=" in line and current_vendor == hwid:
+                match = re.search(r"Driver=([^\s]+)", line)
+                if match: return match.group(1)
+    except: pass
+    return "Unknown/Unbound"
+
 def live_monitor():
     print("--- Live Mode & Crash Monitor ---")
     print("Plug in your adapter, change modes, and watch for crashes in real-time.")
@@ -154,21 +186,28 @@ def live_monitor():
     try:
         last_dmesg_ts = 0.0
         while True:
-            # 1. Print connected 8bitdo devices
+            # 1. Print connected 8bitdo devices and their bound drivers
             lsusb_out = subprocess.run(["lsusb"], capture_output=True, text=True).stdout
             devices = []
             for line in lsusb_out.splitlines():
-                if "057e:2009" in line: devices.append("S-Mode (Switch) [057e:2009]")
-                elif "2dc8:3106" in line: devices.append("X-Mode (Native BT) [2dc8:3106]")
-                elif "2dc8:3105" in line: devices.append("D-Mode (Adapter) [2dc8:3105]")
-                elif "2dc8:3107" in line: devices.append("D-Mode (Native BT) [2dc8:3107]")
-                elif "045e:028e" in line: devices.append("X-Mode (Adapter) [045e:028e]")
+                if "057e:2009" in line:
+                    drv = get_driver_for_device("057e:2009")
+                    devices.append(f"S-Mode [057e:2009] (Driver: {drv})")
+                elif "2dc8:3106" in line:
+                    drv = get_driver_for_device("2dc8:3106")
+                    devices.append(f"X-Mode [2dc8:3106] (Driver: {drv})")
+                elif "2dc8:3105" in line:
+                    drv = get_driver_for_device("2dc8:3105")
+                    devices.append(f"D-Mode [2dc8:3105] (Driver: {drv})")
+                elif "045e:028e" in line:
+                    drv = get_driver_for_device("045e:028e")
+                    devices.append(f"X-Mode [045e:028e] (Driver: {drv})")
             
             sys.stdout.write("\r\033[K")
             if devices:
-                sys.stdout.write("Currently detected: " + " | ".join(devices))
+                sys.stdout.write("Detected: " + " | ".join(devices))
             else:
-                sys.stdout.write("Currently detected: None")
+                sys.stdout.write("Detected: None")
             sys.stdout.flush()
             
             # 2. Check dmesg for crashes
@@ -183,7 +222,7 @@ def live_monitor():
                         recent_timestamp = max(recent_timestamp, ts)
                         if "probe with driver nintendo failed" in line or "error -32" in line or "error -71" in line:
                             print(f"\n\n\033[91m[CRASH DETECTED] {line}\033[0m")
-                            print("\033[93mThe kernel just killed the connection because the Switch handshake failed!\033[0m")
+                            print("\033[93mThe kernel killed the connection! Handshake failed.\033[0m")
                             print("Change to X-Mode or apply a workaround from the main menu.\n")
             
             last_dmesg_ts = recent_timestamp
@@ -199,11 +238,15 @@ def main():
         sys.exit(1)
         
     while True:
+        status = get_workaround_status()
+        q_stat = "[ACTIVE]" if status['quirk'] else "[NOT APPLIED]"
+        b_stat = "[ACTIVE]" if status['blacklist'] else "[NOT APPLIED]"
+        
         print_header()
-        print("1) Live Monitor (Watch USB IDs and detect crashes in real-time)")
+        print("1) Live Monitor (Watch USB IDs, drivers, and crashes in real-time)")
         print("2) View Recent Kernel Logs (dmesg)")
-        print("3) Apply Workaround: Add USBHID Quirk to Boot Cmdline (Recommended)")
-        print("4) Apply Workaround: Blacklist 'hid_nintendo' Driver")
+        print(f"3) Apply Workaround: Add USBHID Quirk to Boot Cmdline {q_stat}")
+        print(f"4) Apply Workaround: Blacklist 'hid_nintendo' Driver {b_stat}")
         print("5) Undo Workaround: Remove USBHID Quirk from Boot Cmdline")
         print("6) Undo Workaround: Delete 'hid_nintendo' Blacklist")
         print("7) Exit")
