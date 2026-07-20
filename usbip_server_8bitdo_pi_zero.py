@@ -459,7 +459,7 @@ def main():
                     print(f"   - {d['busid']} ({d['hwid']}): {d['mode']} [{status}]")
                 
                 if clients:
-                    print(f"   Connected Clients: {', '.join(clients)} (to server {server_ip})")
+                    print(f"   Connected Clients: {', '.join(clients)} (to this server @ {server_ip})")
                 print("-" * 50)
                 last_status_hash = status_hash
 
