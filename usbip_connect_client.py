@@ -143,6 +143,9 @@ def detect_mode(description):
     is_likely_controller = False
     mode = "Unknown"
     
+    # 2. Fallback checks
+    if "keyboard" in desc_lower:
+        return "USB Keyboard", True
     if "8bitdo" in desc_lower or "controller" in desc_lower or "gamepad" in desc_lower or "joystick" in desc_lower or "2dc8:" in desc_lower:
         is_likely_controller = True
         if "switch" in desc_lower: mode = "S-Mode (Switch)"

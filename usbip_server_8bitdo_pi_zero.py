@@ -355,6 +355,63 @@ def check_kernel_crashes():
     except Exception:
         pass
 
+def prompt_for_keyboards():
+    """Scans for keyboards and asks the user if they want to export or disconnect them."""
+    if IS_WINDOWS: return
+    try:
+        out = subprocess.run(["lsusb"], capture_output=True, text=True).stdout
+        keyboards = []
+        for line in out.splitlines():
+            if "keyboard" in line.lower():
+                match = re.search(r"ID ([0-9a-fA-F]{4}:[0-9a-fA-F]{4})\s+(.*)", line)
+                if match:
+                    hwid = match.group(1).lower()
+                    desc = match.group(2).strip()
+                    keyboards.append((hwid, desc))
+        
+        if not keyboards:
+            return
+
+        list_out = subprocess.run(["usbip", "list", "-l"], capture_output=True, text=True).stdout
+        
+        for k_hwid, k_desc in keyboards:
+            is_bound = False
+            k_busid = None
+            
+            lines = list_out.splitlines()
+            for i, line in enumerate(lines):
+                if k_hwid in line.lower():
+                    for j in range(i, -1, -1):
+                        bus_match = re.search(r"busid\s+([0-9a-fA-F.-]+)", lines[j])
+                        if bus_match:
+                            k_busid = bus_match.group(1)
+                            break
+                    for j in range(i, min(len(lines), i+3)):
+                        if "usbip-host" in lines[j]:
+                            is_bound = True
+                            break
+                    break
+                    
+            print(f"\n[KEYBOARD DETECTED] {k_hwid} - {k_desc}")
+            if is_bound:
+                print(f"Status: CURRENTLY EXPORTED to USBIP (Bus ID: {k_busid})")
+                ans = input("Do you want to DISCONNECT it and return it to the Pi? (y/N): ").strip().lower()
+                if ans == 'y':
+                    log(f"Unbinding keyboard {k_busid}...")
+                    subprocess.run(["usbip", "unbind", "-b", k_busid], capture_output=True)
+                    subprocess.run(f"echo -n {k_busid} > /sys/bus/usb/drivers/usbhid/bind", shell=True, capture_output=True)
+                else:
+                    HWID_MAP[k_hwid] = "USB Keyboard"
+            else:
+                print("Status: Currently connected locally to the Pi.")
+                ans = input("Do you want to EXPORT this keyboard to the Windows client? (y/N): ").strip().lower()
+                if ans == 'y':
+                    HWID_MAP[k_hwid] = "USB Keyboard"
+                    log("Keyboard added to export list! It will be bound momentarily.")
+        print("\n")
+    except Exception as e:
+        print(f"Error scanning for keyboards: {e}")
+
 def main():
     if sys.platform not in ["win32", "linux"]:
         log(f"Unsupported platform: {sys.platform}")
@@ -369,6 +426,9 @@ def main():
     log("--- USBIP 8BitDo Manager (v2.2.3) ---")
     log(f"Server IP Address: {server_ip}")
     print_mode_shortcuts()
+    
+    # Prompt for Keyboards
+    prompt_for_keyboards()
     
     # Start the Guardian thread to protect S-Mode
     if not IS_WINDOWS:
