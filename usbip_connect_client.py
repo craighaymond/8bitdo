@@ -20,14 +20,14 @@ def get_timestamp():
 
 # Known 8BitDo Hardware IDs
 HWID_MAP = {
-    "2dc8:3105": ("Receiver (Search)", "Press Pair Button"),
-    "2dc8:3107": ("D-Mode (8BitDo)",   "Hold [-] + [Left]"),
-    "2dc8:3106": ("X-Mode (8BitDo)",   "Native [-] + [X]"),
-    "057e:2009": ("S-Mode (Switch)",   "Hold [-] + [L Bumper]"),
-    "045e:028e": ("X-Mode (X360)",     "Hold [-] + [Up]"),
-    "045e:02d1": ("X-Mode (XOne)",     "Native USB"),
-    "054c:05c4": ("D-Mode (PS4)",      "Hold [-] + [Right]"),
-    "054c:0ce6": ("D-Mode (PS5)",      "Hold [-] + [Down]")
+    "2dc8:3105": ("D-Mode (Idle/Search)", "Hold [-] + [Left]"),
+    "2dc8:3107": ("D-Mode (Active)",    "Auto (When Paired)"),
+    "2dc8:3106": ("X-Mode (Native)",    "Hold [-] + [X]"),
+    "057e:2009": ("S-Mode (Switch)",    "Hold [-] + [L Bumper]"),
+    "045e:028e": ("X-Mode (Adapter)",   "Hold [-] + [Up]"),
+    "045e:02d1": ("X-Mode (XOne)",      "Native USB"),
+    "054c:05c4": ("D-Mode (PS4)",       "Hold [-] + [Right]"),
+    "054c:0ce6": ("D-Mode (PS5)",       "Hold [-] + [Down]")
 }
 
 def print_supported_devices():
