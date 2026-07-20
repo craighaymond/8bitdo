@@ -341,6 +341,15 @@ def main():
                     server_has_attachments = True
                     mode, _ = detect_mode(desc)
                     status_parts.append(f"{busid}: {mode}")
+                    
+                    # The server hides devices from 'usbip list -r' once they are attached.
+                    # We extract the HWID from the local attachment description and add it back
+                    # to all_hwids so the UI correctly shows the device still exists on the server!
+                    match_id = re.search(r"\(([0-9a-fA-F]{4}:[0-9a-fA-F]{4})\)", desc)
+                    if match_id:
+                        hwid = match_id.group(1).lower()
+                        if hwid not in all_hwids:
+                            all_hwids.append(hwid)
             
             status_str = " | ".join(status_parts) if status_parts else "None"
             server_label = server_ip if server_ip else "None"
