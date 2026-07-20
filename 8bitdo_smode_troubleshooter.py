@@ -32,6 +32,13 @@ def print_header():
     print("=================================================================")
     for hwid, (mode, combo) in HWID_MAP.items():
         print(f"| {hwid:<9} | {mode:<18} | {combo:<22} |")
+    print("=================================================================")
+    
+    devices = get_connected_controllers()
+    if devices:
+        print(f" Detected Controllers: {', '.join(devices)}")
+    else:
+        print(" Detected Controllers: None")
     print("=================================================================\n")
 
 def check_dmesg_crashes():
@@ -194,6 +201,27 @@ def get_driver_for_device(hwid):
     except: pass
     return "Unknown/Unbound"
 
+def get_connected_controllers():
+    lsusb_out = subprocess.run(["lsusb"], capture_output=True, text=True).stdout
+    devices = []
+    for line in lsusb_out.splitlines():
+        if "057e:2009" in line:
+            drv = get_driver_for_device("057e:2009")
+            devices.append(f"S-Mode [057e:2009] (Driver: {drv})")
+        elif "2dc8:3106" in line:
+            drv = get_driver_for_device("2dc8:3106")
+            devices.append(f"X-Mode [2dc8:3106] (Driver: {drv})")
+        elif "2dc8:3105" in line:
+            drv = get_driver_for_device("2dc8:3105")
+            devices.append(f"D-Mode [2dc8:3105] (Driver: {drv})")
+        elif "2dc8:3107" in line:
+            drv = get_driver_for_device("2dc8:3107")
+            devices.append(f"D-Mode (Native BT) [2dc8:3107] (Driver: {drv})")
+        elif "045e:028e" in line:
+            drv = get_driver_for_device("045e:028e")
+            devices.append(f"X-Mode (Adapter) [045e:028e] (Driver: {drv})")
+    return devices
+
 def live_monitor():
     print("--- Live Mode & Crash Monitor ---")
     print("Plug in your adapter, change modes, and watch for crashes in real-time.")
@@ -203,21 +231,7 @@ def live_monitor():
         last_dmesg_ts = 0.0
         while True:
             # 1. Print connected 8bitdo devices and their bound drivers
-            lsusb_out = subprocess.run(["lsusb"], capture_output=True, text=True).stdout
-            devices = []
-            for line in lsusb_out.splitlines():
-                if "057e:2009" in line:
-                    drv = get_driver_for_device("057e:2009")
-                    devices.append(f"S-Mode [057e:2009] (Driver: {drv})")
-                elif "2dc8:3106" in line:
-                    drv = get_driver_for_device("2dc8:3106")
-                    devices.append(f"X-Mode [2dc8:3106] (Driver: {drv})")
-                elif "2dc8:3105" in line:
-                    drv = get_driver_for_device("2dc8:3105")
-                    devices.append(f"D-Mode [2dc8:3105] (Driver: {drv})")
-                elif "045e:028e" in line:
-                    drv = get_driver_for_device("045e:028e")
-                    devices.append(f"X-Mode [045e:028e] (Driver: {drv})")
+            devices = get_connected_controllers()
             
             sys.stdout.write("\r\033[K")
             if devices:
