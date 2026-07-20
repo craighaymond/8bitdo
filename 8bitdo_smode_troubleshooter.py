@@ -90,6 +90,58 @@ def apply_blacklist():
         print(f"\nError: {e}")
     input("\nPress Enter to return to menu...")
 
+def remove_cmdline_quirk():
+    print("--- Undo Boot Parameter Quirk (Requires Reboot) ---")
+    print("This removes 'usbhid.quirks=0x057e:0x2009:0x0004' from your /boot/cmdline.txt")
+    print("NOTE: You MUST run this script with 'sudo' for this to work.")
+    
+    confirm = input("\nProceed with undoing cmdline.txt modification? (y/n): ")
+    if confirm.lower() != 'y': return
+    
+    try:
+        cmdline_path = "/boot/cmdline.txt"
+        if not os.path.exists(cmdline_path):
+            cmdline_path = "/boot/firmware/cmdline.txt"
+            
+        with open(cmdline_path, 'r') as f:
+            content = f.read().strip()
+            
+        if "usbhid.quirks=0x057e:0x2009:0x0004" not in content:
+            print("Quirk is not present in cmdline.txt. Nothing to undo.")
+        else:
+            new_content = content.replace(" usbhid.quirks=0x057e:0x2009:0x0004", "")
+            new_content = new_content.replace("usbhid.quirks=0x057e:0x2009:0x0004", "")
+            with open(cmdline_path, 'w') as f:
+                f.write(new_content.strip() + "\n")
+            print(f"Successfully removed quirk from {cmdline_path}.")
+            print("PLEASE REBOOT your Raspberry Pi for this to take effect.")
+    except PermissionError:
+        print("\nERROR: Permission denied. You must run this script with 'sudo'.")
+    except Exception as e:
+        print(f"\nError: {e}")
+    input("\nPress Enter to return to menu...")
+
+def remove_blacklist():
+    print("--- Undo Modprobe Blacklist (Requires Reboot) ---")
+    print("This deletes /etc/modprobe.d/blacklist-nintendo.conf.")
+    print("NOTE: You MUST run this script with 'sudo' for this to work.")
+    
+    confirm = input("\nProceed with deleting blacklist file? (y/n): ")
+    if confirm.lower() != 'y': return
+    
+    try:
+        if os.path.exists("/etc/modprobe.d/blacklist-nintendo.conf"):
+            os.remove("/etc/modprobe.d/blacklist-nintendo.conf")
+            print("Successfully deleted blacklist file.")
+            print("PLEASE REBOOT your Raspberry Pi for this to take effect.")
+        else:
+            print("Blacklist file does not exist. Nothing to undo.")
+    except PermissionError:
+        print("\nERROR: Permission denied. You must run this script with 'sudo'.")
+    except Exception as e:
+        print(f"\nError: {e}")
+    input("\nPress Enter to return to menu...")
+
 def live_monitor():
     print("--- Live Mode & Crash Monitor ---")
     print("Plug in your adapter, change modes, and watch for crashes in real-time.")
@@ -148,9 +200,11 @@ def main():
         print("2) View Recent Kernel Logs (dmesg)")
         print("3) Apply Workaround: Add USBHID Quirk to Boot Cmdline (Recommended)")
         print("4) Apply Workaround: Blacklist 'hid_nintendo' Driver")
-        print("5) Exit")
+        print("5) Undo Workaround: Remove USBHID Quirk from Boot Cmdline")
+        print("6) Undo Workaround: Delete 'hid_nintendo' Blacklist")
+        print("7) Exit")
         
-        choice = input("\nSelect an option (1-5): ").strip()
+        choice = input("\nSelect an option (1-7): ").strip()
         
         if choice == '1':
             live_monitor()
@@ -161,6 +215,10 @@ def main():
         elif choice == '4':
             apply_blacklist()
         elif choice == '5':
+            remove_cmdline_quirk()
+        elif choice == '6':
+            remove_blacklist()
+        elif choice == '7':
             clear_screen()
             break
         else:
