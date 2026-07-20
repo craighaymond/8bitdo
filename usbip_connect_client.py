@@ -20,34 +20,25 @@ def get_timestamp():
 
 # Known 8BitDo Hardware IDs
 HWID_MAP = {
-    "2dc8:3105": "Receiver (Search)",
-    "2dc8:3107": "D-Mode (8BitDo)",
-    "2dc8:3106": "X-Mode (8BitDo)",
-    "057e:2009": "S-Mode (Switch)",
-    "045e:028e": "X-Mode (X360)",
-    "045e:02d1": "X-Mode (XOne)",
-    "054c:05c4": "D-Mode (PS4)",
-    "054c:0ce6": "D-Mode (PS5)"
+    "2dc8:3105": ("Receiver (Search)", "Press Pair Button"),
+    "2dc8:3107": ("D-Mode (8BitDo)",   "Hold [-] + [Left]"),
+    "2dc8:3106": ("X-Mode (8BitDo)",   "Native [-] + [X]"),
+    "057e:2009": ("S-Mode (Switch)",   "Hold [-] + [L Bumper]"),
+    "045e:028e": ("X-Mode (X360)",     "Hold [-] + [Up]"),
+    "045e:02d1": ("X-Mode (XOne)",     "Native USB"),
+    "054c:05c4": ("D-Mode (PS4)",      "Hold [-] + [Right]"),
+    "054c:0ce6": ("D-Mode (PS5)",      "Hold [-] + [Down]")
 }
 
 def print_supported_devices():
-    """Prints a concise 2-column ASCII table of supported controllers."""
-    print("\n" + "=" * 66)
-    print(f"| {'Target ID':<9} | {'Controller Mode':<17} || {'Target ID':<9} | {'Controller Mode':<17} |")
-    print("=" * 66)
+    """Prints a concise ASCII table of supported controllers and their combos."""
+    print("\n" + "=" * 62)
+    print(f"| {'Target ID':<9} | {'Controller Mode':<17} | {'Button Combo (Hold 3s)':<26} |")
+    print("=" * 62)
     
-    items = list(HWID_MAP.items())
-    half = (len(items) + 1) // 2
-    for i in range(half):
-        id1, mode1 = items[i]
-        col1 = f"| {id1:<9} | {mode1:<17} ||"
-        if i + half < len(items):
-            id2, mode2 = items[i + half]
-            col2 = f" {id2:<9} | {mode2:<17} |"
-        else:
-            col2 = f" {'':<9} | {'':<17} |"
-        print(col1 + col2)
-    print("=" * 66 + "\n")
+    for hwid, (mode, combo) in HWID_MAP.items():
+        print(f"| {hwid:<9} | {mode:<17} | {combo:<26} |")
+    print("=" * 62 + "\n")
 
 last_action_id = None
 
@@ -143,7 +134,8 @@ def detect_mode(description):
     desc_lower = description.lower()
     
     # 1. Check exact HWIDs first
-    for hwid, mode_name in HWID_MAP.items():
+    for hwid, mode_info in HWID_MAP.items():
+        mode_name = mode_info[0]
         if hwid in desc_lower:
             return mode_name, True
             
