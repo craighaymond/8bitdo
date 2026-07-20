@@ -109,43 +109,40 @@ def find_usbip_server(last_ip=None):
 
 def detect_mode(description):
     """Detects the controller mode and returns (mode, is_likely_controller)."""
+    # Known 8BitDo Hardware IDs
+    hwid_map = {
+        "2dc8:3105": "Receiver (Searching)",
+        "2dc8:3107": "D-Mode (8BitDo)",
+        "2dc8:3106": "X-Mode (8BitDo)",
+        "057e:2009": "S-Mode (Switch)",
+        "045e:028e": "X-Mode (Xbox 360)",
+        "045e:02d1": "X-Mode (Xbox One)",
+        "054c:05c4": "D-Mode (PS4)",
+        "054c:0ce6": "D-Mode (PS5)"
+    }
+    
+    desc_lower = description.lower()
+    
+    # 1. Check exact HWIDs first
+    for hwid, mode_name in hwid_map.items():
+        if hwid in desc_lower:
+            return mode_name, True
+            
+    # 2. Generic fallback checks
     is_likely_controller = False
     mode = "Unknown"
     
-    # Check for specific Controller VID:PIDs
-    if "057e:2009" in description:
-        mode = "S-Mode (Switch)"
+    if "8bitdo" in desc_lower or "controller" in desc_lower or "gamepad" in desc_lower or "joystick" in desc_lower or "2dc8:" in desc_lower:
         is_likely_controller = True
-    elif "045e:028e" in description or "045e:02d1" in description:
-        mode = "X-Mode (Xbox)"
-        is_likely_controller = True
-    elif "2dc8" in description:
-        # 8BitDo VID
-        mode = "D-Mode (8BitDo)"
-        is_likely_controller = True
-    elif "054c:05c4" in description or "054c:09cc" in description:
-        mode = "D-Mode (PS4)"
-        is_likely_controller = True
-    elif "054c:0ce6" in description:
-        mode = "D-Mode (PS5)"
-        is_likely_controller = True
-    
-    # Fallback string matching
-    if not is_likely_controller:
-        desc_lower = description.lower()
-        if "8bitdo" in desc_lower or "controller" in desc_lower or "gamepad" in desc_lower or "joystick" in desc_lower:
-            is_likely_controller = True
-            if "switch" in desc_lower: mode = "S-Mode (Switch)"
-            elif "xbox" in desc_lower or "x-input" in desc_lower or "xinput" in desc_lower: mode = "X-Mode (Xbox)"
-            elif "dualshock" in desc_lower or "sony" in desc_lower or "playstation" in desc_lower: mode = "D-Mode (PS)"
-            elif "8bitdo" in desc_lower: mode = "8BitDo Device"
-            else: mode = "Unknown Controller"
-        elif "hub" in desc_lower or "root hub" in desc_lower:
-            mode = "USB Hub"
-            is_likely_controller = False
-        elif "adapter" in desc_lower or "receiver" in desc_lower:
-            mode = "Adapter/Receiver"
-            is_likely_controller = False
+        if "switch" in desc_lower: mode = "S-Mode (Switch)"
+        elif "xbox" in desc_lower or "x-input" in desc_lower or "xinput" in desc_lower: mode = "X-Mode (Xbox)"
+        elif "dualshock" in desc_lower or "sony" in desc_lower or "playstation" in desc_lower: mode = "D-Mode (PS)"
+        elif "2dc8:" in desc_lower or "8bitdo" in desc_lower: mode = "8BitDo Device"
+        else: mode = "Unknown Controller"
+    elif "hub" in desc_lower or "root hub" in desc_lower:
+        mode = "USB Hub"
+    elif "adapter" in desc_lower or "receiver" in desc_lower:
+        mode = "Adapter/Receiver"
 
     return mode, is_likely_controller
 
