@@ -128,18 +128,22 @@ def main():
                     hist = target_stat["history"]
                     jitter = sum(abs(hist[i] - hist[i-1]) for i in range(1, len(hist))) / (len(hist) - 1) if len(hist) > 1 else 0.0
 
-                    if lat > 25.0:
+                    if lat > 20.0:
                         status = "HIGH LATENCY (SPIKE)"
                         log_event(name, ip, lat, status)
-                        status_str = f"\033[33m{lat:>5.1f}ms (SPIKE!)\033[0m"
+                        status_str = f"{lat:>5.1f}ms (SPIKE!)"
+                        # Print a permanent timestamped alert line above the status line
+                        sys.stdout.write(f"\r\033[K[{timestamp}] ALERT: High latency spike on {name} ({ip}): {lat:.1f}ms!\n")
                     else:
-                        status_str = f"\033[32m{lat:>5.1f}ms\033[0m"
+                        status_str = f"{lat:>5.1f}ms"
 
                     line_parts.append(f"{name}: {status_str} (jitter: {jitter:.1f}ms)")
                 else:
                     status = "PACKET LOSS (TIMEOUT)"
                     log_event(name, ip, None, status)
-                    status_str = "\033[31m  TIMEOUT  \033[0m"
+                    status_str = "TIMEOUT"
+                    # Print a permanent timestamped alert line above the status line
+                    sys.stdout.write(f"\r\033[K[{timestamp}] ALERT: Packet loss / timeout on {name} ({ip})!\n")
                     line_parts.append(f"{name}: {status_str}")
 
             # Print single-line updating status
