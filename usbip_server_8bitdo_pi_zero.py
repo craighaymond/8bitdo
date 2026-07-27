@@ -189,13 +189,21 @@ def get_8bitdo_devices():
                 if IS_WINDOWS:
                     status_line = line.strip()
                 else:
-                    is_bound = os.path.exists(f"/sys/bus/usb/drivers/usbip-host/{busid}")
+                    usbip_host_dir = "/sys/bus/usb/drivers/usbip-host"
+                    is_bound = (
+                        os.path.exists(f"{usbip_host_dir}/{busid}") or 
+                        (os.path.exists(usbip_host_dir) and any(f.startswith(f"{busid}:") for f in os.listdir(usbip_host_dir)))
+                    )
                     if is_bound:
                         status_line = "Shared"
                         try:
-                            with open(f"/sys/bus/usb/drivers/usbip-host/{busid}/usbip_status", "r") as f:
-                                if f.read().strip() == "3":
-                                    status_line = "Attached"
+                            for check_id in [busid, f"{busid}:1.0", f"{busid}:1.1"]:
+                                st_path = f"{usbip_host_dir}/{check_id}/usbip_status"
+                                if os.path.exists(st_path):
+                                    with open(st_path, "r") as f:
+                                        if f.read().strip() == "3":
+                                            status_line = "Attached"
+                                            break
                         except Exception:
                             pass
                     else:

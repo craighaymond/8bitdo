@@ -169,7 +169,11 @@ def get_8bitdo_devices():
                 if IS_WINDOWS:
                     status_line = line.strip()
                 else:
-                    is_bound = os.path.exists(f"/sys/bus/usb/drivers/usbip-host/{busid}")
+                    usbip_host_dir = "/sys/bus/usb/drivers/usbip-host"
+                    is_bound = (
+                        os.path.exists(f"{usbip_host_dir}/{busid}") or 
+                        (os.path.exists(usbip_host_dir) and any(f.startswith(f"{busid}:") for f in os.listdir(usbip_host_dir)))
+                    )
                     status_line = "Shared" if is_bound else "Not shared"
                 
                 bitdo_devs.append({
