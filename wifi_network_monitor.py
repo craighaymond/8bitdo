@@ -131,7 +131,10 @@ def main():
                     hist = target_stat["history"]
                     jitter = sum(abs(hist[i] - hist[i-1]) for i in range(1, len(hist))) / (len(hist) - 1) if len(hist) > 1 else 0.0
 
-                    if lat > 20.0:
+                    if lat > 250.0:
+                        # Device is in sleep / power-saving mode (e.g. TV turned off/standby)
+                        status_str = f"{lat:>5.1f}ms [Sleep]"
+                    elif lat > 20.0:
                         status = "HIGH LATENCY (SPIKE)"
                         log_event(name, ip, lat, status)
                         status_str = f"{lat:>5.1f}ms (SPIKE!)"
@@ -141,10 +144,14 @@ def main():
 
                     line_parts.append(f"{name}: {status_str} (jitter: {jitter:.1f}ms)")
                 else:
-                    status = "PACKET LOSS (TIMEOUT)"
-                    log_event(name, ip, None, status)
-                    status_str = "TIMEOUT"
-                    print(f"\n[{timestamp}] ALERT: Packet loss / timeout on {name} ({ip})!")
+                    # Timeout: Check if this is the TV in standby mode
+                    if "TV" in name or "Moonlight" in name:
+                        status_str = "[Standby/Off]"
+                    else:
+                        status = "PACKET LOSS (TIMEOUT)"
+                        log_event(name, ip, None, status)
+                        status_str = "TIMEOUT"
+                        print(f"\n[{timestamp}] ALERT: Packet loss / timeout on {name} ({ip})!")
                     line_parts.append(f"{name}: {status_str}")
 
             # Print status line
