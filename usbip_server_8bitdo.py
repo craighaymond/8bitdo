@@ -198,14 +198,9 @@ def bind_8bitdo(devices):
                 # Use --force for more reliable takeover from Windows HID driver
                 cmd = [USBIP_CMD, "bind", "--force", "--busid", dev['busid']]
             else:
-                # Force unbind from Linux usbhid/driver stack first for composite devices (keyboards)
+                # Force unbind from Linux usbhid driver stack for composite devices (keyboards)
                 try:
                     dev_path = f"/sys/bus/usb/devices/{dev['busid']}"
-                    usb_unbind = "/sys/bus/usb/drivers/usb/unbind"
-                    if os.path.exists(usb_unbind):
-                        try:
-                            with open(usb_unbind, 'w') as f: f.write(dev['busid'])
-                        except Exception: pass
                     if os.path.exists(dev_path):
                         for iface_dir in os.listdir(dev_path):
                             if iface_dir.startswith(f"{dev['busid']}:"):
@@ -213,6 +208,11 @@ def bind_8bitdo(devices):
                                 if os.path.exists(unbind_path):
                                     try:
                                         with open(unbind_path, 'w') as f: f.write(iface_dir)
+                                    except Exception: pass
+                                hid_unbind = "/sys/bus/usb/drivers/usbhid/unbind"
+                                if os.path.exists(hid_unbind):
+                                    try:
+                                        with open(hid_unbind, 'w') as f: f.write(iface_dir)
                                     except Exception: pass
                 except Exception: pass
                 cmd = [USBIP_CMD, "bind", "-b", dev['busid']]

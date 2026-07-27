@@ -227,26 +227,25 @@ def bind_8bitdo(devices):
                 # Use --force for more reliable takeover from Windows HID driver
                 cmd = [USBIP_CMD, "bind", "--force", "--busid", dev['busid']]
             else:
-                # Attempt to manually unbind device and all interfaces on Linux before binding to usbip-host
+                # Attempt to manually unbind interfaces from local drivers (usbhid) before binding to usbip-host
                 try:
-                    # 1. Force unbind from main USB driver stack (releases composite devices like keyboards)
-                    usb_unbind = "/sys/bus/usb/drivers/usb/unbind"
-                    if os.path.exists(usb_unbind):
-                        try:
-                            with open(usb_unbind, 'w') as f:
-                                f.write(dev['busid'])
-                        except Exception:
-                            pass
-                            
-                    # 2. Force unbind all interface sub-directories (e.g. 1-1.2.4:1.0, 1-1.2.4:1.1)
                     dev_path = f"/sys/bus/usb/devices/{dev['busid']}"
                     if os.path.exists(dev_path):
                         for iface_dir in os.listdir(dev_path):
                             if iface_dir.startswith(f"{dev['busid']}:"):
+                                # 1. Unbind from active interface driver
                                 unbind_path = f"{dev_path}/{iface_dir}/driver/unbind"
                                 if os.path.exists(unbind_path):
                                     try:
                                         with open(unbind_path, 'w') as f:
+                                            f.write(iface_dir)
+                                    except Exception:
+                                        pass
+                                # 2. Explicitly unbind from usbhid driver if bound
+                                hid_unbind = "/sys/bus/usb/drivers/usbhid/unbind"
+                                if os.path.exists(hid_unbind):
+                                    try:
+                                        with open(hid_unbind, 'w') as f:
                                             f.write(iface_dir)
                                     except Exception:
                                         pass
