@@ -197,32 +197,46 @@ def bind_8bitdo(devices):
             if IS_WINDOWS:
                 # Use --force for more reliable takeover from Windows HID driver
                 cmd = [USBIP_CMD, "bind", "--force", "--busid", dev['busid']]
-            else:
-                # Force unbind from Linux usbhid driver stack for composite devices (keyboards)
                 try:
-                    dev_path = f"/sys/bus/usb/devices/{dev['busid']}"
+                    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
+                    print("Successfully bound.")
+                except subprocess.CalledProcessError as e:
+                    error_msg = (e.stderr or e.stdout or "Unknown error").strip()
+                    print(f"Failed: {error_msg}")
+            else:
+                # Linux manual sysfs bind (bypassing usbip binary which resets USB devices)
+                try:
+                    busid = dev['busid']
+                    match_busid_path = "/sys/bus/usb/drivers/usbip-host/match_busid"
+                    bind_path = "/sys/bus/usb/drivers/usbip-host/bind"
+                    
+                    if os.path.exists(match_busid_path):
+                        try:
+                            with open(match_busid_path, 'w') as f: f.write(f"add {busid}")
+                        except Exception: pass
+                    
+                    bound_any = False
+                    dev_path = f"/sys/bus/usb/devices/{busid}"
                     if os.path.exists(dev_path):
-                        for iface_dir in os.listdir(dev_path):
-                            if iface_dir.startswith(f"{dev['busid']}:"):
+                        for iface_dir in sorted(os.listdir(dev_path)):
+                            if iface_dir.startswith(f"{busid}:"):
                                 unbind_path = f"{dev_path}/{iface_dir}/driver/unbind"
                                 if os.path.exists(unbind_path):
                                     try:
                                         with open(unbind_path, 'w') as f: f.write(iface_dir)
                                     except Exception: pass
-                                hid_unbind = "/sys/bus/usb/drivers/usbhid/unbind"
-                                if os.path.exists(hid_unbind):
+                                if os.path.exists(bind_path):
                                     try:
-                                        with open(hid_unbind, 'w') as f: f.write(iface_dir)
+                                        with open(bind_path, 'w') as f: f.write(iface_dir)
+                                        bound_any = True
                                     except Exception: pass
-                except Exception: pass
-                cmd = [USBIP_CMD, "bind", "-b", dev['busid']]
-                
-            try:
-                result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-                print("Successfully bound.")
-            except subprocess.CalledProcessError as e:
-                error_msg = (e.stderr or e.stdout or "Unknown error").strip()
-                print(f"Failed: {error_msg}")
+                    if bound_any:
+                        print("Successfully bound.")
+                    else:
+                        subprocess.run([USBIP_CMD, "bind", "-b", busid], capture_output=True, text=True, check=True)
+                        print("Successfully bound (fallback).")
+                except Exception as e:
+                    print(f"Failed: {e}")
 
 def print_mode_shortcuts():
     """Prints the button shortcuts for changing 8BitDo controller modes."""

@@ -227,41 +227,7 @@ def bind_8bitdo(devices):
                 # Use --force for more reliable takeover from Windows HID driver
                 cmd = [USBIP_CMD, "bind", "--force", "--busid", dev['busid']]
             else:
-                # Attempt to manually unbind interfaces from local drivers (usbhid) before binding to usbip-host
-                try:
-                    dev_path = f"/sys/bus/usb/devices/{dev['busid']}"
-                    if os.path.exists(dev_path):
-                        for iface_dir in os.listdir(dev_path):
-                            if iface_dir.startswith(f"{dev['busid']}:"):
-                                # 1. Unbind from active interface driver
-                                unbind_path = f"{dev_path}/{iface_dir}/driver/unbind"
-                                if os.path.exists(unbind_path):
-                                    try:
-                                        with open(unbind_path, 'w') as f:
-                                            f.write(iface_dir)
-                                    except Exception:
-                                        pass
-                                # 2. Explicitly unbind from usbhid driver if bound
-                                hid_unbind = "/sys/bus/usb/drivers/usbhid/unbind"
-                                if os.path.exists(hid_unbind):
-                                    try:
-                                        with open(hid_unbind, 'w') as f:
-                                            f.write(iface_dir)
-                                    except Exception:
-                                        pass
-                except Exception:
-                    pass
-                cmd = None
-                
-            if cmd:
-                try:
-                    result = subprocess.run(cmd, capture_output=True, text=True, check=True)
-                    print("Successfully bound.")
-                except subprocess.CalledProcessError as e:
-                    error_msg = (e.stderr or e.stdout or "Unknown error").strip()
-                    print(f"Failed: {error_msg}")
-            else:
-                # Linux manual sysfs bind (bypassing usbip binary which is broken on modern kernels)
+                # Linux manual sysfs bind (bypassing usbip binary which resets USB devices)
                 try:
                     busid = dev['busid']
                     match_busid_path = "/sys/bus/usb/drivers/usbip-host/match_busid"
@@ -271,32 +237,45 @@ def bind_8bitdo(devices):
                         try:
                             with open(match_busid_path, 'w') as f:
                                 f.write(f"add {busid}")
-                        except Exception as e:
-                            print(f"Failed to write match_busid: {e}")
-                            
-                    try:
-                        with open(bind_path, 'w') as f:
-                            f.write(busid)
+                        except Exception:
+                            pass
+                    
+                    bound_any = False
+                    dev_path = f"/sys/bus/usb/devices/{busid}"
+                    if os.path.exists(dev_path):
+                        for iface_dir in sorted(os.listdir(dev_path)):
+                            if iface_dir.startswith(f"{busid}:"):
+                                # 1. Unbind interface from active driver (e.g. usbhid)
+                                unbind_path = f"{dev_path}/{iface_dir}/driver/unbind"
+                                if os.path.exists(unbind_path):
+                                    try:
+                                        with open(unbind_path, 'w') as f:
+                                            f.write(iface_dir)
+                                    except Exception:
+                                        pass
+                                
+                                # 2. Bind interface directly to usbip-host
+                                if os.path.exists(bind_path):
+                                    try:
+                                        with open(bind_path, 'w') as f:
+                                            f.write(iface_dir)
+                                        bound_any = True
+                                    except Exception:
+                                        pass
+                                        
+                    if bound_any:
                         print("Successfully bound.")
-                    except Exception as e:
-                        print(f"Failed to bind directly (sysfs): {e}")
-                        
-                        if DEBUG:
-                            try:
-                                drivers = os.listdir("/sys/bus/usb/drivers/")
-                                print(f"   [Diagnostic] Available USB drivers: {', '.join(drivers)}")
-                                dmesg_out = subprocess.run(["dmesg"], capture_output=True, text=True).stdout
-                                dmesg_usbip = "\n".join([line for line in dmesg_out.splitlines() if "usbip" in line.lower()][-10:])
-                                print(f"   [Diagnostic] dmesg (last 10 usbip lines):\n{dmesg_usbip}")
-                            except Exception:
-                                pass
-                        
-                        print(f"   > Falling back to 'usbip bind -b {busid}'...")
+                    else:
+                        # Fallback to device-level bind if no interface subdirs existed
                         try:
-                            result = subprocess.run([USBIP_CMD, "bind", "-b", busid], capture_output=True, text=True, check=True)
+                            with open(bind_path, 'w') as f:
+                                f.write(busid)
+                            print("Successfully bound.")
+                        except Exception as e:
+                            print(f"Failed direct bind: {e}")
+                            print(f"   > Falling back to 'usbip bind -b {busid}'...")
+                            subprocess.run([USBIP_CMD, "bind", "-b", busid], capture_output=True, text=True, check=True)
                             print("Successfully bound (fallback).")
-                        except subprocess.CalledProcessError as err:
-                            print(f"Fallback failed: {(err.stderr or err.stdout or 'Unknown error').strip()}")
                 except Exception as e:
                     print(f"Failed: {e}")
 
