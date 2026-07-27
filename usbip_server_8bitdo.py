@@ -212,7 +212,7 @@ def bind_8bitdo(devices):
                     
                     if os.path.exists(match_busid_path):
                         try:
-                            with open(match_busid_path, 'w') as f: f.write(f"add {busid}")
+                            with open(match_busid_path, 'w') as f: f.write(busid)
                         except Exception: pass
                     
                     bound_any = False

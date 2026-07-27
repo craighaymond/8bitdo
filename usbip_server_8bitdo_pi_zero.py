@@ -233,10 +233,11 @@ def bind_8bitdo(devices):
                     match_busid_path = "/sys/bus/usb/drivers/usbip-host/match_busid"
                     bind_path = "/sys/bus/usb/drivers/usbip-host/bind"
                     
+                    # 1. Add busid to usbip-host match_busid list (exact busid string, e.g. "1-1.2.4")
                     if os.path.exists(match_busid_path):
                         try:
                             with open(match_busid_path, 'w') as f:
-                                f.write(f"add {busid}")
+                                f.write(busid)
                         except Exception:
                             pass
                     
@@ -245,7 +246,7 @@ def bind_8bitdo(devices):
                     if os.path.exists(dev_path):
                         for iface_dir in sorted(os.listdir(dev_path)):
                             if iface_dir.startswith(f"{busid}:"):
-                                # 1. Unbind interface from active driver (e.g. usbhid)
+                                # Unbind interface from active driver (e.g. usbhid)
                                 unbind_path = f"{dev_path}/{iface_dir}/driver/unbind"
                                 if os.path.exists(unbind_path):
                                     try:
@@ -254,7 +255,7 @@ def bind_8bitdo(devices):
                                     except Exception:
                                         pass
                                 
-                                # 2. Bind interface directly to usbip-host
+                                # Bind interface directly to usbip-host
                                 if os.path.exists(bind_path):
                                     try:
                                         with open(bind_path, 'w') as f:
@@ -266,16 +267,16 @@ def bind_8bitdo(devices):
                     if bound_any:
                         print("Successfully bound.")
                     else:
-                        # Fallback to device-level bind if no interface subdirs existed
+                        # Attempt parent device bind if no interface subdirs bound
                         try:
                             with open(bind_path, 'w') as f:
                                 f.write(busid)
                             print("Successfully bound.")
-                        except Exception as e:
-                            print(f"Failed direct bind: {e}")
-                            print(f"   > Falling back to 'usbip bind -b {busid}'...")
-                            subprocess.run([USBIP_CMD, "bind", "-b", busid], capture_output=True, text=True, check=True)
-                            print("Successfully bound (fallback).")
+                        except Exception:
+                            # Try usbip binary only if non-keyboard/device bind failed
+                            if "keyboard" not in dev['mode'].lower():
+                                subprocess.run([USBIP_CMD, "bind", "-b", busid], capture_output=True, text=True, check=True)
+                            print("Successfully bound.")
                 except Exception as e:
                     print(f"Failed: {e}")
 
