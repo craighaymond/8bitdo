@@ -16,6 +16,7 @@ HWID_MAP = {
     "045e:02d1": "Xbox One",
     "054c:05c4": "PS4 (D-Mode)",
     "054c:0ce6": "PS5 (D-Mode)",
+    "c0f4:05c0": "USB Keyboard",
     "2dc8": "8BitDo Device"
 }
 TARGET_HWIDS = list(HWID_MAP.keys())

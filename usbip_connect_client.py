@@ -27,7 +27,8 @@ HWID_MAP = {
     "045e:028e": ("X-Mode (Adapter)",   "Hold [-] + [Up]"),
     "045e:02d1": ("X-Mode (XOne)",      "Native USB"),
     "054c:05c4": ("D-Mode (PS4)",       "Hold [-] + [Right]"),
-    "054c:0ce6": ("D-Mode (PS5)",       "Hold [-] + [Down]")
+    "054c:0ce6": ("D-Mode (PS5)",       "Hold [-] + [Down]"),
+    "c0f4:05c0": ("USB Keyboard",       "Native USB")
 }
 
 def print_supported_devices():
