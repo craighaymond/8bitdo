@@ -135,8 +135,7 @@ def main():
                         status = "HIGH LATENCY (SPIKE)"
                         log_event(name, ip, lat, status)
                         status_str = f"{lat:>5.1f}ms (SPIKE!)"
-                        # Print a permanent timestamped alert line above the status line
-                        sys.stdout.write(f"\r\033[K[{timestamp}] ALERT: High latency spike on {name} ({ip}): {lat:.1f}ms!\n")
+                        print(f"\n[{timestamp}] ALERT: High latency spike on {name} ({ip}): {lat:.1f}ms!")
                     else:
                         status_str = f"{lat:>5.1f}ms"
 
@@ -145,13 +144,12 @@ def main():
                     status = "PACKET LOSS (TIMEOUT)"
                     log_event(name, ip, None, status)
                     status_str = "TIMEOUT"
-                    # Print a permanent timestamped alert line above the status line
-                    sys.stdout.write(f"\r\033[K[{timestamp}] ALERT: Packet loss / timeout on {name} ({ip})!\n")
+                    print(f"\n[{timestamp}] ALERT: Packet loss / timeout on {name} ({ip})!")
                     line_parts.append(f"{name}: {status_str}")
 
-            # Print single-line updating status
+            # Print status line
             output = " | ".join(line_parts)
-            sys.stdout.write(f"\r\033[K{output}")
+            sys.stdout.write(f"\r{output}                    ")
             sys.stdout.flush()
 
             time.sleep(PING_INTERVAL)
