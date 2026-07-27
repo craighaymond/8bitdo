@@ -113,11 +113,25 @@ class ControllerBridge:
         log(f"Unplugging {self.name} (ID: {self.instance_id})")
         if hasattr(self, 'xbox'): del self.xbox
 
+def enforce_single_instance():
+    mutex_name = "Global\\8bitdo_bridge_single_instance_mutex"
+    kernel32 = ctypes.windll.kernel32
+    mutex = kernel32.CreateMutexW(None, False, mutex_name)
+    last_error = kernel32.GetLastError()
+    
+    if last_error == 183:  # ERROR_ALREADY_EXISTS
+        print("Another instance of the bridge is already running. Exiting to prevent duplicate ghost controllers.")
+        sys.exit(0)
+    return mutex
+
 def main():
+    _mutex = enforce_single_instance()
+    
     pygame.init()
     pygame.joystick.init()
     bridges = {}
     log("8BitDo Bridge Running. Press Ctrl+C to stop.")
+    log("  [Exit Emulator]   Hold [Minus/Select] + Press [Plus/Start]")
     
     try:
         while True:
@@ -127,8 +141,8 @@ def main():
                     temp_joy = pygame.joystick.Joystick(event.device_index)
                     name = temp_joy.get_name().lower()
                     
-                    # STRICT FILTERING: Ignore virtual Xbox controllers AND sensors/peripherals
-                    skip_keywords = ["xbox", "keyboard", "mouse", "motion", "sensor", "accel"]
+                    # STRICT FILTERING: Ignore virtual Xbox controllers AND sensors/peripherals/adapters
+                    skip_keywords = ["xbox", "keyboard", "mouse", "motion", "sensor", "accel", "8bitdo"]
                     if any(kw in name for kw in skip_keywords):
                         continue
                         

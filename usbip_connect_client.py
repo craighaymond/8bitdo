@@ -38,6 +38,8 @@ def print_supported_devices():
     
     for hwid, (mode, combo) in HWID_MAP.items():
         print(f"| {hwid:<9} | {mode:<17} | {combo:<26} |")
+    print("-" * 62)
+    print(f"| {'Exit Combo':<9} | {'Exit Emulator':<17} | {'Hold [-/Select] + [+]':<26} |")
     print("=" * 62 + "\n")
 
 last_action_id = None

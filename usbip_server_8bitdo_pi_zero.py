@@ -227,8 +227,18 @@ def bind_8bitdo(devices):
                 # Use --force for more reliable takeover from Windows HID driver
                 cmd = [USBIP_CMD, "bind", "--force", "--busid", dev['busid']]
             else:
-                # Attempt to manually unbind interfaces on Linux before binding to usbip-host
+                # Attempt to manually unbind device and all interfaces on Linux before binding to usbip-host
                 try:
+                    # 1. Force unbind from main USB driver stack (releases composite devices like keyboards)
+                    usb_unbind = "/sys/bus/usb/drivers/usb/unbind"
+                    if os.path.exists(usb_unbind):
+                        try:
+                            with open(usb_unbind, 'w') as f:
+                                f.write(dev['busid'])
+                        except Exception:
+                            pass
+                            
+                    # 2. Force unbind all interface sub-directories (e.g. 1-1.2.4:1.0, 1-1.2.4:1.1)
                     dev_path = f"/sys/bus/usb/devices/{dev['busid']}"
                     if os.path.exists(dev_path):
                         for iface_dir in os.listdir(dev_path):
@@ -300,6 +310,7 @@ def print_mode_shortcuts():
     log("  [D] D-Input:      Hold [Minus] + [B] for 5s -> ID: 2dc8:3107")
     log("  [Idle] Searching: Baseline receiver state     -> ID: 2dc8:3105")
     log("  (Note: Hold until the controller vibrates)")
+    log("  [Exit Emulator]   Hold [Minus/Select] + Press [Plus/Start]")
     log("-----------------------------------")
     log("8BitDo USB Wireless Adapter Shortcuts:")
     log("  [S] Switch Mode:  Hold [Minus] + [L Bumper] for 3s")
