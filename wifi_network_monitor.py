@@ -88,6 +88,9 @@ def log_event(target_name, ip, latency, status):
         pass
 
 def main():
+    if sys.platform == "win32":
+        os.system('')  # Enable VT100 / ANSI escape sequence parsing in Windows console
+
     gateway_ip = get_default_gateway()
     TARGETS["Router"] = gateway_ip
 
