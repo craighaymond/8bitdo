@@ -22,7 +22,7 @@ HWID_MAP = {
 }
 TARGET_HWIDS = list(HWID_MAP.keys())
 
-POLL_INTERVAL = 0.5  # Seconds between checks (0.5 seconds for aggressive binding)
+POLL_INTERVAL = 2.0  # Seconds between checks (2 seconds)
 USBIP_PORT = 3240
 DEBUG = "--debug" in sys.argv or "--diagnostics" in sys.argv
 
