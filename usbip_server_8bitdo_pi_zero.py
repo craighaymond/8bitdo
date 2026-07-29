@@ -345,6 +345,7 @@ def check_kernel_crashes():
 def prompt_for_keyboards():
     """Scans for keyboards and asks the user if they want to export or disconnect them."""
     if IS_WINDOWS: return
+    import select
     try:
         out = subprocess.run(["lsusb"], capture_output=True, text=True).stdout
         keyboards = []
@@ -382,7 +383,13 @@ def prompt_for_keyboards():
             print(f"\n[KEYBOARD DETECTED] {k_hwid} - {k_desc}")
             if is_bound:
                 print(f"Status: CURRENTLY EXPORTED to USBIP (Bus ID: {k_busid})")
-                ans = input("Do you want to DISCONNECT it and return it to the Pi? (y/N): ").strip().lower()
+                print("Do you want to DISCONNECT it and return it to the Pi? (y/N, 10s timeout): ", end="", flush=True)
+                i, _, _ = select.select([sys.stdin], [], [], 10)
+                if i:
+                    ans = sys.stdin.readline().strip().lower()
+                else:
+                    print("\nTimeout reached. Defaulting to NO.")
+                    ans = 'n'
                 if ans == 'y':
                     log(f"Unbinding keyboard {k_busid}...")
                     subprocess.run(["usbip", "unbind", "-b", k_busid], capture_output=True)
@@ -391,8 +398,14 @@ def prompt_for_keyboards():
                     HWID_MAP[k_hwid] = "USB Keyboard"
             else:
                 print("Status: Currently connected locally to the Pi.")
-                ans = input("Do you want to EXPORT this keyboard to the Windows client? (y/N): ").strip().lower()
-                if ans == 'y':
+                print("Do you want to EXPORT this keyboard to the Windows client? (Y/n, 10s timeout): ", end="", flush=True)
+                i, _, _ = select.select([sys.stdin], [], [], 10)
+                if i:
+                    ans = sys.stdin.readline().strip().lower()
+                else:
+                    print("\nTimeout reached. Defaulting to YES.")
+                    ans = 'y'
+                if ans == '' or ans == 'y':
                     HWID_MAP[k_hwid] = "USB Keyboard"
                     log("Keyboard added to export list! It will be bound momentarily.")
         print("\n")
